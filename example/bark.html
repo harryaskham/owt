@@ -41,18 +41,14 @@
           throw new Error(await response.text());
         }
         const reader = response.body.getReader();
-        var allBlobs = [];
         const stream = new ReadableStream({
           start(controller) {
             return go();
             function go() {
               return reader.read().then(({ done, value }) => {
                 if (value) {
-                  const blob = new Blob([value], { type: 'audio/wav' });
-                  console.log('got blob', blob);
-                  allBlobs.push(blob);
-                  setAudioDataURL(new Blob(allBlobs, { type: 'audio/wav' }));
-                }
+                  setAudioDataURL([value]);
+                } 
 
                 // When no more data needs to be consumed, close the stream
                 if (done) {
@@ -67,33 +63,25 @@
         });
       }
 
-      function setAudioDataURL(blob) {
-        const audioDiv = document.getElementById('bark-output');
-        const oldAudio = audioDiv.lastChild;
-        var time = null;
-        var audio;
-        if (oldAudio) {
-          time = oldAudio.currentTime;
-          audio = oldAudio;
-        } else {
-          audio = new Audio();
-          audioDiv.appendChild(audio);
-        }
+      const audio = new Audio();
+
+      function setAudioDataURL(values) {
+        console.log('setting audio data url', values);
+        const blob = new Blob([values], { type: 'audio/wav' });
+        console.log('setting audio data url', values, blob);
         audio.src = URL.createObjectURL(blob);
-        audio.controls = true;
-        if (time) {
-          audio.currentTime = time;
-        }
-        audio.play().then(() => {
-          console.log('playing');
-        }).catch((error) => {
-          console.log('error playing', error);
-        });
+        audio.play();
       }
 
       $(function() {
         console.log("setting download");
         $("#download").attr('href', audioUrl());
+        const audioDiv = document.getElementById('bark-output');
+        audio.controls = true;
+        audioDiv.appendChild(audio);
+        audio.addEventListener('loadeddata', () => {
+          audio.play();
+        });
       });
     </script>
   </head>
