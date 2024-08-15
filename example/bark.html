@@ -41,25 +41,18 @@
           throw new Error(await response.text());
         }
         const reader = response.body.getReader();
-        const stream = new ReadableStream({
-          start(controller) {
-            return go();
-            function go() {
-              return reader.read().then(({ done, value }) => {
-                if (value) {
-                  setAudioDataURL([value]);
-                } 
+        reader.read().then(({ done, value }) => {
+          if (value) {
+            setAudioDataURL([value]);
+          } 
 
-                // When no more data needs to be consumed, close the stream
-                if (done) {
-                  controller.close();
-                }
-                // Enqueue the next data chunk into our target stream
-                controller.enqueue(value);
-                return go();
-              });
-            }
-          },
+          // When no more data needs to be consumed, close the stream
+          if (done) {
+            controller.close();
+          }
+          // Enqueue the next data chunk into our target stream
+          controller.enqueue(value);
+          return go();
         });
       }
 
@@ -67,7 +60,7 @@
 
       function setAudioDataURL(values) {
         console.log('setting audio data url', values);
-        const blob = new Blob([values], { type: 'audio/wav' });
+        const blob = new Blob(values, { type: 'audio/wav' });
         console.log('setting audio data url', values, blob);
         audio.src = URL.createObjectURL(blob);
         audio.play();
