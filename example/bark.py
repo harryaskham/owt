@@ -25,26 +25,13 @@ def run(text: str):
     sentences = nltk.sent_tokenize(script)
 
     SPEAKER = "v2/en_speaker_6"
-    silence = np.zeros(int(0.25 * SAMPLE_RATE))  # quarter second of silence
 
     def generate():
-        # pieces = []
         for sentence in sentences:
             logging.info("Generating sentence: %s", sentence)
             audio_array = generate_audio(sentence, history_prompt=SPEAKER)
-            # pieces += [audio_array]  # , silence.copy()]
             wav_buffer = io.BytesIO()
             write_wav(wav_buffer, SAMPLE_RATE, audio_array)
-            buf = wav_buffer
-            yield buf.read()
-            # data = buf.read(1024)
-            # while data:
-            #     yield data
-            #     data = buf.read(1024)
-        # audio_array = np.concatenate(pieces)
-        # write_wav(wav_buffer, SAMPLE_RATE, audio_array)
-        # wav_buffer.seek(0)
-        # return wav_buffer
+            yield wav_buffer.read()
 
     return generate(), {"Content-Type": "audio/mpeg"}
-    # return send_file(generate(), mimetype="audio/mpeg")
