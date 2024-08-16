@@ -43,7 +43,7 @@ The primary motivation is rapid prototyping against new machine learning models 
 3. Docker-ify it
    - Long; CUDA can be annoying; still need to expose the logic by one of the other methods.
 4. Building a lightweight API backend exposing the Python logic and writing client code in your language of choice
-   - Annoying boilerplate; the time between "I can run ~python generate.py --animal=cat > pic.png~ on my machine" and "I have some ~generate :: Animal -> IO Image~" can be >1h.
+   - Annoying boilerplate; the time between "I can run the Python on my machine" and "I have some native Haskell code doing the same~ can be >1h.
    - Either one new service for every new library you want to test out, or now you need to maintain a growing monolith of unrelated endpoints
 
 ~owt~ aims to make #4 less painful, at the cost of security and sanity, by providing a single service capable of serving arbitrary new logic without requiring changes to ~owt~ itself.
