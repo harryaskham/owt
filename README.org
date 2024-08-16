@@ -1,4 +1,4 @@
-# Created 2024-08-16 Fri 20:16
+# Created 2024-08-16 Fri 20:55
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -8,10 +8,19 @@ Serve up owt yer fancy on t'fly.
 
 A Flask app exposing an endpoint whose request handling behaviour is configured by the request itself.
 
-For example:
+For example, start by launching ~owt~:
+
+#+begin_src
+$ owt
+
+Owt serving on 0.0.0.0:9876
+#+end_src
+
+Now you can run any behaviour (as long as the imports are available in ~owt~'s ~$PYTHONPATH~ - for this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within a project directory) via a thin Python adaptor:
 
 #+begin_src python
-# adaptor.py
+# fancy_ai_adaptor.py (wrap once, call from anywhere)
+
 from big.research.lab import fancy_ai
 
 def run(_, prompt):
@@ -22,9 +31,18 @@ Which can be called from any language with a tiny client:
 
 #+begin_src javascript
 // client.js
-const url = owtify('adaptor.py', {'prompt': 'output SOTA results'});
-const response = await fetch(url);
-...
+
+const url = owtify(url, 'adaptor.py', {'prompt': 'output SOTA results'});
+const response = await fetch(url, {});
+#+end_src
+
+The client-free version isn't very complex either:
+
+#+begin_src bash
+curl -G \
+  --data-urlencode code_b64=$(cat adaptor.py | base64 -w 0) \
+  --data-urlencode kwargs_b64=$(echo "{'prompt':'output SOTA results'}") \
+  http://localhost:9876
 #+end_src
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
