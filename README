@@ -1,3 +1,8 @@
+#+NAME: shell_out
+#+BEGIN_SRC sh :var data="" :results output
+  echo "> $data"
+#+END_SRC
+
 * Owt
 
 Serve up owt yer fancy on t'fly.
@@ -11,7 +16,7 @@ For example, start by launching ~owt~:
 #+BEGIN_SRC
 $ owt
 
-Owt serving on 0.0.0.0:9876
+> Owt serving on 0.0.0.0:9876
 #+END_SRC
 
 Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
@@ -83,14 +88,12 @@ Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kw
 ***** As a self-contained shell script
 #+INCLUDE: "example/echo/echo_script.sh" src bash
 
-#+BEGIN_SRC bash :exports both :results html drawer replace
+#+BEGIN_SRC bash :exports both :results output replace :post shell_out(data=*this*)
 ./example/echo/echo_script.sh http://localhost:9876
 #+END_SRC
 
 #+RESULTS:
-:results:
-Hello, owt!
-:end:
+: > Hello, owt!
 
 ***** As a Python file + script
 #+INCLUDE: "example/echo/echo.py" src python

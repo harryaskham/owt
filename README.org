@@ -1,6 +1,10 @@
-# Created 2024-08-16 Fri 21:19
+# Created 2024-08-16 Fri 21:25
 #+title: 
 #+author: Harry Askham
+#+name: shell_out
+#+begin_src sh :var data="" :results output
+  echo "> $data"
+#+end_src
 * Owt
 
 Serve up owt yer fancy on t'fly.
@@ -13,7 +17,7 @@ For example, start by launching ~owt~:
 #+begin_src
 $ owt
 
-Owt serving on 0.0.0.0:9876
+> Owt serving on 0.0.0.0:9876
 #+end_src
 
 Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
@@ -91,14 +95,12 @@ curl --json $(jo \
 ) $URL/hello
 #+end_src
 
-#+begin_src bash :exports both :results html drawer replace
+#+begin_src bash :exports both :results output replace :post shell_out(data=*this*)
 ./example/echo/echo_script.sh http://localhost:9876
 #+end_src
 
 #+results: 
-:results:
-Hello, owt!
-:END:
+: > Hello, owt!
 ***** As a Python file + script
 #+begin_src python
 def run(request, name=None):
