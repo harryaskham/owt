@@ -17,7 +17,7 @@ Owt serving on 0.0.0.0:9876
 Now you can run any behaviour (as long as the imports are available in ~owt~'s ~$PYTHONPATH~ - for this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within a project directory) via a thin Python adaptor:
 
 #+BEGIN_SRC python
-# fancy_ai_adaptor.py (wrap once, call from anywhere)
+# adaptor.py (wrap once, call from anywhere)
 
 from big.research.lab import fancy_ai
 
@@ -28,7 +28,7 @@ def run(_, prompt):
 Which can be called from any language with a tiny client:
 
 #+BEGIN_SRC javascript
-// client.js
+// app.js
 
 const url = owtify(url, 'adaptor.py', {'prompt': 'output SOTA results'});
 const response = await fetch(url, {});
@@ -273,3 +273,8 @@ Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-insid
 #+end_export
 
 Hoo boy. How is Python a real language.
+
+** TODO
+- [ ] ~owt.summat~ building blocks for common operations
+- [ ] Tiny client libraries
+- [ ] Split into ~owt serve~ and ~owt encode some_file.py {arg:value}~
