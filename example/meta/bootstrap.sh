@@ -1,3 +1,5 @@
+# example/meta/bootstrap.sh
+
 function owtInOwt() {
   URL="$1"
   PORT="$2"

@@ -1,3 +1,5 @@
+# example/bark/bark_construct_curl.sh
+
 URL="$1"
 CODE=$(python <<EOF
 with open('example/bark/bark.html', 'r') as html_f:

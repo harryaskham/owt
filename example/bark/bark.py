@@ -1,3 +1,6 @@
+# example/bark/bark.py
+
+
 def run(request, text: str, speaker: str = "v2/en_speaker_6"):
     import os
     import logging

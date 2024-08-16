@@ -1,3 +1,6 @@
+# example/bootstrap/bootstrap.py
+
+
 def run(request, payload_code_b64, payload_kwargs_b64):
     import os
 

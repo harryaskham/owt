@@ -1,3 +1,5 @@
+# example/bark/bark.sh
+#
 # Usage:
 # ./example/bark/bark.sh \
 #   http://localhost:9876/file.wav \

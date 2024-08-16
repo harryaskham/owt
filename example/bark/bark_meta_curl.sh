@@ -1,3 +1,5 @@
+# example/bark/bark_meta_curl.sh
+
 URL="$1"
 read -r -d '' CODE << 'EOF'
 def run(_, base_url):
