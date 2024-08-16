@@ -1,4 +1,4 @@
-# Created 2024-08-16 Fri 21:02
+# Created 2024-08-16 Fri 21:19
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -6,7 +6,7 @@
 Serve up owt yer fancy on t'fly.
 ** What's This?
 
-A Flask app exposing an endpoint whose request handling behaviour is configured by the request itself.
+A server an endpoint whose request handling behaviour is configured by the request itself.
 
 For example, start by launching ~owt~:
 
@@ -16,7 +16,7 @@ $ owt
 Owt serving on 0.0.0.0:9876
 #+end_src
 
-Now you can run any behaviour (as long as the imports are available in ~owt~'s ~$PYTHONPATH~ - for this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within a project directory) via a thin Python adaptor:
+Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
 
 #+begin_src python
 # adaptor.py (wrap once, call from anywhere)
@@ -32,7 +32,7 @@ Which can be called from any language with a tiny client:
 #+begin_src javascript
 // app.js
 
-const url = owtify(url, 'adaptor.py', {'prompt': 'output SOTA results'});
+const url = owtify('http://localhost:9876', 'adaptor.py', {'prompt': 'output SOTA results'});
 const response = await fetch(url, {});
 #+end_src
 
@@ -68,6 +68,8 @@ The primary motivation is rapid prototyping against new machine learning models 
 The cost of supporting some new system is pushed to the client, who must send adaptor code (a request handler, essentially) along with the request. This creates a virtual endpoint on the fly, giving complete control over the serving logic to the API user.
 
 Writing the adaptor code is a one-time cost for each new virtual endpoint, made cheaper by having access to ~owt.summat~, a collection of composable building blocks.
+
+The imports used by an adaptor have to be available in ~owt~'s ~$PYTHONPATH~. For this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within some project directory.
 *** Examples
 
 The following examples (in ~example/~) could all be run one-by-one without any need to restart or rebuild ~owt~. The first one is shown a few different ways to give a flavour of usage. Subsequent examples just show ~curl~ in tandem with an adaptor ~.py~ file, but it's easy to see how one could extend from here to call to ~owt~ from any other language.
@@ -89,16 +91,18 @@ curl --json $(jo \
 ) $URL/hello
 #+end_src
 
-#+begin_src bash :exports both :results html
+#+begin_src bash :exports both :results html drawer replace
 ./example/echo/echo_script.sh http://localhost:9876
 #+end_src
+
+#+results: 
+:results:
+Hello, owt!
+:END:
 ***** As a Python file + script
 #+begin_src python
 def run(request, name=None):
-    # Loads from either the free-text path or the request body
-    if not name:
-        name = request.path.split("/")[-1]
-    return f"Hello, {name}!"
+    return f"Hello, {name}, from {Server.sing().address}:{Server.sing().port}!"
 #+end_src
 
 Passing data via POST JSON ~kwargs~:
@@ -110,7 +114,7 @@ KWARGS_B64=$(echo "{'name': 'owt'}" | base64 -w 0)
 curl --json $(jo code_b64=$CODE_B64 kwargs_b64=$KWARGS_B64) $URL/hello
 #+end_src
 
-#+begin_src bash :exports both :results html
+#+begin_src bash :exports both :results html replace
 ./example/echo/echo_kwargs.sh http://localhost:9876
 #+end_src
 
@@ -293,7 +297,7 @@ bash -c "$(./example/bark/bark_meta_curl.sh http://localhost:9876) -s -o /dev/nu
 #+end_src
 **** Going Meta-Circular
 
-Wait, no...
+So what would stop you hosting the entirey of ~owt.py~ on... wait, no...
 
 #+begin_src bash
 function owtInOwt() {
@@ -353,12 +357,12 @@ KWARGS_B64=$(echo "{'name': 'owt-inside-owt'}" | base64 -w 0)
 
 # Send a request that installs a full copy of owt and calls it with the payload code+kwargs
 CMD=$(owtInOwt http://localhost 9876 "$CODE_B64" "$KWARGS_B64")
-echo "Bootstrapping $CMD"
+echo "Running: $CMD"
 echo "Result:"
 bash -c "$CMD"
 #+end_src
 
-Oh no... but that would mean...
+Oh no... but that would mean you could... I wonder...
 
 #+begin_src python
 def run(request, payload_code_b64, payload_kwargs_b64):

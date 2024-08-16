@@ -4,7 +4,7 @@ Serve up owt yer fancy on t'fly.
 
 ** What's This?
 
-A Flask app exposing an endpoint whose request handling behaviour is configured by the request itself.
+A server an endpoint whose request handling behaviour is configured by the request itself.
 
 For example, start by launching ~owt~:
 
@@ -14,7 +14,7 @@ $ owt
 Owt serving on 0.0.0.0:9876
 #+END_SRC
 
-Now you can run any behaviour (as long as the imports are available in ~owt~'s ~$PYTHONPATH~ - for this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within a project directory) via a thin Python adaptor:
+Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
 
 #+BEGIN_SRC python
 # adaptor.py (wrap once, call from anywhere)
@@ -30,7 +30,7 @@ Which can be called from any language with a tiny client:
 #+BEGIN_SRC javascript
 // app.js
 
-const url = owtify(url, 'adaptor.py', {'prompt': 'output SOTA results'});
+const url = owtify('http://localhost:9876', 'adaptor.py', {'prompt': 'output SOTA results'});
 const response = await fetch(url, {});
 #+END_SRC
 
@@ -42,7 +42,6 @@ curl -G \
   --data-urlencode kwargs_b64=$(echo "{'prompt':'output SOTA results'}") \
   http://localhost:9876
 #+END_SRC
-
 
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
@@ -71,6 +70,8 @@ The cost of supporting some new system is pushed to the client, who must send ad
 
 Writing the adaptor code is a one-time cost for each new virtual endpoint, made cheaper by having access to ~owt.summat~, a collection of composable building blocks.
 
+The imports used by an adaptor have to be available in ~owt~'s ~$PYTHONPATH~. For this ~owt~ can be started inside a virtualenv, after installing a package globally, or just from within some project directory.
+
 *** Examples
 
 The following examples (in ~example/~) could all be run one-by-one without any need to restart or rebuild ~owt~. The first one is shown a few different ways to give a flavour of usage. Subsequent examples just show ~curl~ in tandem with an adaptor ~.py~ file, but it's easy to see how one could extend from here to call to ~owt~ from any other language.
@@ -82,14 +83,14 @@ Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kw
 ***** As a self-contained shell script
 #+INCLUDE: "example/echo/echo_script.sh" src bash
 
-#+BEGIN_SRC bash :exports both :results html
+#+BEGIN_SRC bash :exports both :results html drawer replace
 ./example/echo/echo_script.sh http://localhost:9876
 #+END_SRC
 
 #+RESULTS:
-#+begin_export html
+:results:
 Hello, owt!
-#+end_export
+:end:
 
 ***** As a Python file + script
 #+INCLUDE: "example/echo/echo.py" src python
@@ -98,13 +99,13 @@ Passing data via POST JSON ~kwargs~:
 
 #+INCLUDE: "example/echo/echo_kwargs.sh" src bash
 
-#+BEGIN_SRC bash :exports both :results html
+#+BEGIN_SRC bash :exports both :results html replace
 ./example/echo/echo_kwargs.sh http://localhost:9876
 #+END_SRC
 
 #+RESULTS:
 #+begin_export html
-Hello, owt!
+Hello, owt, from 0.0.0.0:9876!
 #+end_export
 
 Passing data via GET in the path:
@@ -191,7 +192,7 @@ http://localhost:9876/?code_b64=ZGVmIHJ1bihfLCBiYXNlX3VybCk6CiAgaW1wb3J0IG9zCiAg
 
 **** Going Meta-Circular
 
-Wait, no...
+So what would stop you hosting the entirey of ~owt.py~ on... wait, no...
 
 #+INCLUDE: "example/meta/bootstrap.sh" src bash
 
@@ -206,7 +207,7 @@ KWARGS_B64=$(echo "{'name': 'owt-inside-owt'}" | base64 -w 0)
 
 # Send a request that installs a full copy of owt and calls it with the payload code+kwargs
 CMD=$(owtInOwt http://localhost 9876 "$CODE_B64" "$KWARGS_B64")
-echo "Bootstrapping $CMD"
+echo "Running: $CMD"
 echo "Result:"
 bash -c "$CMD"
 #+END_SRC
@@ -218,7 +219,7 @@ Result:
 Hello, owt-inside-owt!
 #+end_export
 
-Oh no... but that would mean...
+Oh no... but that would mean you could... I wonder...
 
 #+INCLUDE: "example/meta/bootstrap.py" src python
 
@@ -251,25 +252,25 @@ done
 
 #+begin_export html
 layer: owt-inside-owt
-Result:  Hello, owt-inside-owt!
+Result:  Hello, owt-inside-owt, from 0.0.0.0:9880!
 layer: owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9882!
 layer: owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9884!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9886!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9888!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9889!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9891!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9892!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9894!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9890!
 #+end_export
 
 Hoo boy. How is Python a real language.
