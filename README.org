@@ -153,3 +153,86 @@ bash -c "$(./example/bark/bark_meta_curl.sh http://localhost:9876) -s -o /dev/nu
 #+begin_export html
 http://localhost:9876/?code_b64=ZGVmIHJ1bihfLCBiYXNlX3VybCk6CiAgaW1wb3J0IG9zCiAgaHRtbCA9IG9zLnBvcGVuKGYnYmFzaCAtYyAiJCguL2V4YW1wbGUvYmFyay9iYXJrX2NvbnN0cnVjdF9jdXJsLnNoIHtiYXNlX3VybH0pIicpLnJlYWQoKQogIHJldHVybiBodG1sCg%3d%3d&kwargs_b64=eyJiYXNlX3VybCI6ICJodHRwOi8vbG9jYWxob3N0Ojk4NzYifQo%3d
 #+end_export
+
+***** Going Meta-Circular
+
+Oh no...
+
+#+INCLUDE: "example/meta/bootstrap.sh" src bash
+
+#+BEGIN_SRC bash :exports both :results html
+source "example/meta/bootstrap.sh"
+
+# Load up the nice simple echo example from earlier
+CODE_B64=$(cat example/echo/echo.py | base64 -w 0)
+KWARGS_B64=$(echo "{'name': 'owt-inside-owt'}" | base64 -w 0)
+
+# Send a request that installs a full copy of owt and calls it with the payload code+kwargs
+CMD=$(owtInOwt http://localhost 9876 "$CODE_B64" "$KWARGS_B64")
+echo "Bootstrapping $CMD"
+echo "Result:"
+bash -c "$CMD"
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+Bootstrapping curl -G --data-urlencode code_b64=ZGVmIHJ1bihyZXF1ZXN0LCBwYXlsb2FkX2NvZGVfYjY0LCBwYXlsb2FkX2t3YXJnc19iNjQpOgogIF9nbG9iYWxzID0geydfX25hbWVfXyc6IF9fbmFtZV9fKydfbmV3JywKICAgICAgICAgICAgICAnbmV3X3BvcnQnOiBhcmdzLnBvcnQgKyAxfQogIF9sb2NhbHMgPSB7fQogIHByaW50KGYnR29pbmcgb25lIGxldmVsIGRvd24gdG8gcG9ydCB7X2dsb2JhbHNbJ25ld19wb3J0J119Li4uJykKCiAgZXhlYygnJycKcHJpbnQoJ09uZSBsZXZlbCBkZWVwZXIsIGltcG9ydGluZyBvd3QnKQpmcm9tIG93dCBpbXBvcnQgKgpmcm9tIG11bHRpcHJvY2Vzc2luZyBpbXBvcnQgUHJvY2VzcwphcmdzLnBvcnQgPSBuZXdfcG9ydApzZXJ2ZXJfdGhyZWFkID0gUHJvY2Vzcyh0YXJnZXQ9bWFpbikKJycnLCBfZ2xvYmFscywgX2xvY2FscykKCiAgZGVmIGtpbGwoKToKICAgIGltcG9ydCB0aW1lCiAgICB0aW1lLnNsZWVwKDEwKQogICAgcHJpbnQoZidLaWxsaW5nIHNlcnZlciBvbiB7YXJncy5wb3J0fScpCiAgICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10udGVybWluYXRlKCkKICAgIHByaW50KGYnS2lsbGVkIHNlcnZlciBvbiB7YXJncy5wb3J0fScpCgogIGZyb20gbXVsdGlwcm9jZXNzaW5nIGltcG9ydCBQcm9jZXNzCiAgaW1wb3J0IHJlcXVlc3RzCiAgaW1wb3J0IHVybGxpYgoKICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10uc3RhcnQoKQogIFByb2Nlc3ModGFyZ2V0PWtpbGwpLnN0YXJ0KCkKICBib290c3RyYXBwZWRfdXJsID0gZiJodHRwOi8vbG9jYWxob3N0OntfZ2xvYmFsc1snbmV3X3BvcnQnXX0ve3JlcXVlc3QucGF0aH0/Y29kZV9iNjQ9e3VybGxpYi5wYXJzZS5xdW90ZV9wbHVzKHBheWxvYWRfY29kZV9iNjQpfSZrd2FyZ3NfYjY0PXt1cmxsaWIucGFyc2UucXVvdGVfcGx1cyhwYXlsb2FkX2t3YXJnc19iNjQpfSIKICBwcmludChib290c3RyYXBwZWRfdXJsKQogIHJlc3AgPSByZXF1ZXN0cy5nZXQoYm9vdHN0cmFwcGVkX3VybCkKICByZXR1cm4gcmVzcC5jb250ZW50Cg== --data-urlencode kwargs_b64=eyJwYXlsb2FkX2NvZGVfYjY0IjoiWkdWbUlISjFiaWh5WlhGMVpYTjBMQ0J1WVcxbFBVNXZibVVwT2dvZ0lDQWdJeUJNYjJGa2N5Qm1jbTl0SUdWcGRHaGxjaUIwYUdVZ1puSmxaUzEwWlhoMElIQmhkR2dnYjNJZ2RHaGxJSEpsY1hWbGMzUWdZbTlrZVFvZ0lDQWdhV1lnYm05MElHNWhiV1U2Q2lBZ0lDQWdJQ0FnYm1GdFpTQTlJSEpsY1hWbGMzUXVjR0YwYUM1emNHeHBkQ2dpTHlJcFd5MHhYUW9nSUNBZ2NtVjBkWEp1SUdZaVNHVnNiRzhzSUh0dVlXMWxmU0VpQ2c9PSIsICJwYXlsb2FkX2t3YXJnc19iNjQiOiAiZXlkdVlXMWxKem9nSjI5M2RDMXBibk5wWkdVdGIzZDBKMzBLIn0K http://localhost:9876
+Result:
+Hello, owt-inside-owt!
+#+end_export
+
+Oh no... but that would mean...
+
+#+INCLUDE: "example/meta/bootstrap.py" src python
+
+#+BEGIN_SRC bash :exports both :results html :noeval
+METACODE_B64=$(cat example/meta/bootstrap.py | base64 -w 0)
+function wrapOwt() {
+  CODE_B64="$1"
+  KWARGS_B64="$2"
+  METAKWARGS_B64=$(base64 -w 0 <<< "{\"payload_code_b64\":\"$CODE_B64\", \"payload_kwargs_b64\": \"$KWARGS_B64\"}")
+  echo "$METAKWARGS_B64"
+}
+
+N_LAYERS="10"
+for layer in $(seq 1 $N_LAYERS); do
+  CODE_B64=$(cat example/echo/echo.py | base64 -w 0)
+  NAME="owt"
+  for i in $(seq 1 $layer); do
+      NAME="$NAME-inside-owt"
+  done
+  KWARGS_B64=$(echo "{\"name\": \"$NAME\"}" | base64 -w 0)
+  METAKWARGS_B64=$(wrapOwt "$CODE_B64" "$KWARGS_B64")
+  for i in seq 2 $layer; do
+      METAKWARGS_B64=$(wrapOwt "$METACODE_B64" "$METAKWARGS_B64")
+  done
+  echo "layer: $NAME"
+  CMD="curl -G --data-urlencode code_b64=$METACODE_B64 --data-urlencode kwargs_b64=$METAKWARGS_B64 http://localhost:9876"
+  echo "Result: " $(bash -c "$CMD")
+done
+#+END_SRC
+
+#+begin_export html
+layer: owt-inside-owt
+Result:  Hello, owt-inside-owt!
+layer: owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt!
+#+end_export
+
+Hoo boy. How is Python a real language.

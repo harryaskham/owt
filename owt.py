@@ -210,7 +210,7 @@ class Unsafe:
             raise ValueError(f"Failed to parse Unsafe from JSON: {e}")
 
     @classmethod
-    def from_request(cls) -> "Unsafe":
+    def from_request(cls, request) -> "Unsafe":
         try:
             unsafe = cls.from_json(request.data)
             logging.info(
@@ -273,9 +273,13 @@ class Unsafe:
 @app.route("/<path:path>", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
 @auth.login_required
-def unsafe_exec(path: str | None = None):
+def unsafe_exec(path: str | None = None) -> Response:
+    return _run_unsafe_exec(path, request)
+
+
+def _run_unsafe_exec(path: str | None, request) -> Response:
     try:
-        unsafe = Unsafe.from_request()
+        unsafe = Unsafe.from_request(request)
     except Exception as e:
         return f"Invalid Unsafe data in request: {e}", 400
 
@@ -310,7 +314,11 @@ def unsafe_exec(path: str | None = None):
         return f"Error executing Unsafe code: {e}", 500
 
 
-if __name__ == "__main__":
+def main():
     auth = BasicAuth(enabled=args.auth_enabled)
     auth.add(*args.auth.split(":"))
     Server.serve(address=args.address, port=args.port, auth=auth)
+
+
+if __name__ == "__main__":
+    main()
