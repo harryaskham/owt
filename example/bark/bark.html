@@ -18,16 +18,15 @@
         return $('#bark-input').val();
       }
 
-
       function audioUrl(code, text) {
         const request = makeRequest(code, text);
         return url() + '?' + $.param(request);
       }
 
-
       function audioChunkHandler(chunk) {
         console.log('audio chunk', chunk);
-        setAudioDataURL([chunk]);
+        const blob = new Blob([chunk], { type: 'audio/wav' });
+        setAudioDataURL(blob);
       }
 
       function audioDoneHandler() {
@@ -35,27 +34,28 @@
       }
 
       function handleSpeak() {
-        return getAudio(url(), code(), text(), audioChunkHandler, audioDoneHandler);
+        return getAudio(url(), code(), barkText(), audioChunkHandler, audioDoneHandler);
       }
 
       const audio = new Audio();
 
-      function setAudioDataURL(values) {
-        console.log('setting audio data url', values);
-        const blob = new Blob(values, { type: 'audio/wav' });
-        console.log('setting audio data url', values, blob);
+      function makeAudio(blob) {
+        const time = audio.currentTime;
         audio.src = URL.createObjectURL(blob);
-        audio.play();
+        audio.controls = true;
+        audio.play().then(() => {
+          audio.currentTime = time;
+        }).catch((error) => {
+          console.error('audio play error', error);
+        });
       }
 
-      $(function() {
+      function setAudioDataURL(blob) {
         const audioDiv = document.getElementById('bark-output');
-        audio.controls = true;
-        audioDiv.appendChild(audio);
-        audio.addEventListener('loadeddata', () => {
-          audio.play();
-        });
-      });
+        audioDiv.replaceChildren(audio);
+        console.log('setting audio data url', blob);
+        makeAudio(blob);
+      }
     </script>
   </head>
   <body>
@@ -63,7 +63,7 @@
     <input type="text" id="url" value="http://localhost:9876/test.wav"></input>
     <label for="bark-input">Text to speak</label>
     <textarea id="bark-input">Test sentence. And a second test.</textarea>
-    <button onclick="handleSpeak">Speak</button>
+    <button onclick="handleSpeak()">Speak</button>
     <div id="bark-output"></div>
     <pre>
       <code id="code" contenteditable="true">

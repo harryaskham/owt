@@ -1,4 +1,4 @@
-# Created 2024-08-16 Fri 22:00
+# Created 2024-08-16 Fri 23:09
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -33,7 +33,7 @@ Which can be called from any language with a tiny client:
 // app.js
 
 const url = owtify('http://localhost:9876', 'adaptor.py', {'prompt': 'output SOTA results'});
-const response = await fetch(url, {});
+const response = await fetch(url, {...});
 #+end_src
 
 The client-free version isn't very complex either:
@@ -47,7 +47,7 @@ curl -G \
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
 
-There's support for basic auth via ~--auth="username:sha256(password)"~ but still, exercise caution. It would not be difficult to accidentally make an ~owt~ API call that irreversibly destroyed your own machine.
+There's support for basic auth via ~owt --auth="username:sha256(password)"~ but still, exercise caution. It would not be difficult to accidentally make an ~owt~ API call that irreversibly destroyed your own machine.
 *** Why?
 
 The primary motivation is rapid prototyping against new machine learning models from languages other than Python. So often the newest hotness drops with a checkpoint and a Python client, and using this outside of the specific ecosystem in which it is designed to run means one of:
@@ -163,6 +163,7 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
     import logging
     import io
     import nltk
+    import numpy as np
     from scipy.io.wavfile import write as write_wav
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -176,14 +177,21 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
 
     def generate():
         sentences = nltk.sent_tokenize(text.replace("\n", " ").strip())
+        full_wav_array = None
         for i, sentence in enumerate(sentences):
             logging.info(
                 "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
             )
             wav_array = generate_audio(sentence, history_prompt=speaker)
-            buf = io.BytesIO()
-            write_wav(buf, SAMPLE_RATE, wav_array)
-            yield buf.read()
+            full_wav_array = (
+                wav_array
+                if full_wav_array is None
+                else np.concatenate((full_wav_array, wav_array))
+            )
+            if i == len(sentences) - 1:
+                buf = io.BytesIO()
+                write_wav(buf, SAMPLE_RATE, full_wav_array)
+                yield buf.read()
 
     return generate(), {"Content-Type": "audio/mpeg"}
 #+end_src
@@ -193,20 +201,17 @@ Bundle the endpoint logic with a prompt and download the resulting audio.
 # example/bark/bark.sh
 #
 # Usage:
-# ./example/bark/bark.sh \
-#   http://localhost:9876/file.wav \
-#   "Hello world! This is a test." \
-#   /tmp/output_file.wav
+# ./example/bark/bark.sh http://localhost:9876/file.wav "Hello world! This is a test." /tmp/output_file.wav
 
 URL="$1"
 TEXT="$2"
 OUTFILE="$3"
 
-CODE="$(< example/bark/bark.py)"
-KWARGS="{'text': '$TEXT'}"
+CODE_B64="$(cat example/bark/bark.py | base64 -w 0)"
+KWARGS_B64=$(echo "{\"text\": \"$TEXT\"}" | base64 -w 0)
 JSON=$(jo \
-  code_b64=$(echo "$CODE" | base64 -w 0) \
-  kwargs_b64=$(echo "$KWARGS" | base64 -w 0) \
+  code_b64=$CODE_B64 \
+  kwargs_b64=$KWARGS_B64 \
   use_cache="true" \
   cache_kwargs="true" \
 )
@@ -227,25 +232,23 @@ function makeRequest(code, text) {
 }
 
 async function getAudio(url, code, text, onChunk, onDone) {
-  let response = await fetch(url, {
+  const response = await fetch(url, {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
       },
       body: JSON.stringify(makeRequest(code, text))
   });
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
   const reader = response.body.getReader();
-  reader.read().then(({ done, chunk }) => {
-    if (chunk) {
-      onChunk(chunk);
-    }
-    if (done) {
-      onDone();
-    }
-  });
+  let result = await reader.read();
+  while (!result.done) {
+    const chunk = result.value;
+    console.log("result is", result)
+    console.log("chunk is", chunk)
+    onChunk(chunk)
+    result = await reader.read()
+  }
+  onDone();
 }
 #+end_src
 ***** Ad-hoc Web Server
@@ -270,11 +273,9 @@ with open('example/bark/bark.html', 'r') as html_f:
                            '<script>\n'+js_f.read()+'\n</script>'))
       print('''
 def run(_):
-  from flask import render_template
-  try:
-      render_template(\'\'\''''+template+'''\'\'\')
-  except Exception as e:
-      return str(e)''')
+  return (r\'\'\'
+'''+template+'''
+\'\'\')''')
 EOF
 )
 CODE_B64=$(base64 -w 0 <<< "$CODE")
@@ -286,7 +287,7 @@ bash -c "$(./example/bark/bark_construct_curl.sh http://localhost:9876) -s -o /d
 #+end_src
 
 #+results: 
-: http://localhost:9876/?code_b64=CmRlZiBydW4oXyk6CiAgZnJvbSBmbGFzayBpbXBvcnQgcmVuZGVyX3RlbXBsYXRlCiAgdHJ5OgogICAgICByZW5kZXJfdGVtcGxhdGUoJycnPCFkb2N0eXBlIGh0bWw%2bCjxodG1sPgogIDxoZWFkPgogICAgPHRpdGxlPmJhcmsgdGVzdDwvdGl0bGU%2bCiAgICA8bGluayByZWw9InN0eWxlc2hlZXQiIGhyZWY9Imh0dHBzOi8vY2RuLnNpbXBsZWNzcy5vcmcvc2ltcGxlLm1pbi5jc3MiPgogICAgPHNjcmlwdD4KZnVuY3Rpb24gbWFrZVJlcXVlc3QoY29kZSwgdGV4dCkgewogIHJldHVybiB7CiAgICAnY29kZV9iNjQnOiBidG9hKGNvZGUpLAogICAgJ2t3YXJnc19iNjQnOiBidG9hKCd7InRleHQiOiAiJyArIHRleHQgKyAnIn0nKQogIH07Cn0KCmFzeW5jIGZ1bmN0aW9uIGdldEF1ZGlvKHVybCwgY29kZSwgdGV4dCwgb25DaHVuaywgb25Eb25lKSB7CiAgbGV0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2godXJsLCB7CiAgICAgIG1ldGhvZDogJ1BPU1QnLAogICAgICBoZWFkZXJzOiB7CiAgICAgICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL2pzb24nLAogICAgICB9LAogICAgICBib2R5OiBKU09OLnN0cmluZ2lmeShtYWtlUmVxdWVzdChjb2RlLCB0ZXh0KSkKICB9KTsKICBpZiAoIXJlc3BvbnNlLm9rKSB7CiAgICB0aHJvdyBuZXcgRXJyb3IoYXdhaXQgcmVzcG9uc2UudGV4dCgpKTsKICB9CiAgY29uc3QgcmVhZGVyID0gcmVzcG9uc2UuYm9keS5nZXRSZWFkZXIoKTsKICByZWFkZXIucmVhZCgpLnRoZW4oKHsgZG9uZSwgY2h1bmsgfSkgPT4gewogICAgaWYgKGNodW5rKSB7CiAgICAgIG9uQ2h1bmsoY2h1bmspOwogICAgfQogICAgaWYgKGRvbmUpIHsKICAgICAgb25Eb25lKCk7CiAgICB9CiAgfSk7Cn0KCjwvc2NyaXB0PgogICAgPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PgogICAgPHNjcmlwdD4KICAgICAgZnVuY3Rpb24gY29kZSgpIHsKICAgICAgICByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHVybCgpIHsKICAgICAgICByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyAgIAogICAgICB9CgogICAgICBmdW5jdGlvbiBiYXJrVGV4dCgpIHsKICAgICAgICByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsKICAgICAgfQoKCiAgICAgIGZ1bmN0aW9uIGF1ZGlvVXJsKGNvZGUsIHRleHQpIHsKICAgICAgICBjb25zdCByZXF1ZXN0ID0gbWFrZVJlcXVlc3QoY29kZSwgdGV4dCk7CiAgICAgICAgcmV0dXJuIHVybCgpICsgJz8nICsgJC5wYXJhbShyZXF1ZXN0KTsKICAgICAgfQoKCiAgICAgIGZ1bmN0aW9uIGF1ZGlvQ2h1bmtIYW5kbGVyKGNodW5rKSB7CiAgICAgICAgY29uc29sZS5sb2coJ2F1ZGlvIGNodW5rJywgY2h1bmspOwogICAgICAgIHNldEF1ZGlvRGF0YVVSTChbY2h1bmtdKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gYXVkaW9Eb25lSGFuZGxlcigpIHsKICAgICAgICBjb25zb2xlLmxvZygnYXVkaW8gZG9uZScpOwogICAgICB9CgogICAgICBmdW5jdGlvbiBoYW5kbGVTcGVhaygpIHsKICAgICAgICByZXR1cm4gZ2V0QXVkaW8odXJsKCksIGNvZGUoKSwgdGV4dCgpLCBhdWRpb0NodW5rSGFuZGxlciwgYXVkaW9Eb25lSGFuZGxlcik7CiAgICAgIH0KCiAgICAgIGNvbnN0IGF1ZGlvID0gbmV3IEF1ZGlvKCk7CgogICAgICBmdW5jdGlvbiBzZXRBdWRpb0RhdGFVUkwodmFsdWVzKSB7CiAgICAgICAgY29uc29sZS5sb2coJ3NldHRpbmcgYXVkaW8gZGF0YSB1cmwnLCB2YWx1ZXMpOwogICAgICAgIGNvbnN0IGJsb2IgPSBuZXcgQmxvYih2YWx1ZXMsIHsgdHlwZTogJ2F1ZGlvL3dhdicgfSk7CiAgICAgICAgY29uc29sZS5sb2coJ3NldHRpbmcgYXVkaW8gZGF0YSB1cmwnLCB2YWx1ZXMsIGJsb2IpOwogICAgICAgIGF1ZGlvLnNyYyA9IFVSTC5jcmVhdGVPYmplY3RVUkwoYmxvYik7CiAgICAgICAgYXVkaW8ucGxheSgpOwogICAgICB9CgogICAgICAkKGZ1bmN0aW9uKCkgewogICAgICAgIGNvbnN0IGF1ZGlvRGl2ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Jhcmstb3V0cHV0Jyk7CiAgICAgICAgYXVkaW8uY29udHJvbHMgPSB0cnVlOwogICAgICAgIGF1ZGlvRGl2LmFwcGVuZENoaWxkKGF1ZGlvKTsKICAgICAgICBhdWRpby5hZGRFdmVudExpc3RlbmVyKCdsb2FkZWRkYXRhJywgKCkgPT4gewogICAgICAgICAgYXVkaW8ucGxheSgpOwogICAgICAgIH0pOwogICAgICB9KTsKICAgIDwvc2NyaXB0PgogIDwvaGVhZD4KICA8Ym9keT4KICAgIDxsYWJlbCBmb3I9InVybCI%2bRXhlYyBVUkw8L2xhYmVsPgogICAgPGlucHV0IHR5cGU9InRleHQiIGlkPSJ1cmwiIHZhbHVlPSJodHRwOi8vbG9jYWxob3N0Ojk4NzYvdGVzdC53YXYiPjwvaW5wdXQ%2bCiAgICA8bGFiZWwgZm9yPSJiYXJrLWlucHV0Ij5UZXh0IHRvIHNwZWFrPC9sYWJlbD4KICAgIDx0ZXh0YXJlYSBpZD0iYmFyay1pbnB1dCI%2bVGVzdCBzZW50ZW5jZS4gQW5kIGEgc2Vjb25kIHRlc3QuPC90ZXh0YXJlYT4KICAgIDxidXR0b24gb25jbGljaz0iaGFuZGxlU3BlYWsiPlNwZWFrPC9idXR0b24%2bCiAgICA8ZGl2IGlkPSJiYXJrLW91dHB1dCI%2bPC9kaXY%2bCiAgICA8cHJlPgogICAgICA8Y29kZSBpZD0iY29kZSIgY29udGVudGVkaXRhYmxlPSJ0cnVlIj4KIyBleGFtcGxlL2JhcmsvYmFyay5weQoKCmRlZiBydW4ocmVxdWVzdCwgdGV4dDogc3RyLCBzcGVha2VyOiBzdHIgPSAidjIvZW5fc3BlYWtlcl82Iik6CiAgICBpbXBvcnQgb3MKICAgIGltcG9ydCBsb2dnaW5nCiAgICBpbXBvcnQgaW8KICAgIGltcG9ydCBubHRrCiAgICBmcm9tIHNjaXB5LmlvLndhdmZpbGUgaW1wb3J0IHdyaXRlIGFzIHdyaXRlX3dhdgoKICAgIG9zLmVudmlyb25bIkNVREFfVklTSUJMRV9ERVZJQ0VTIl0gPSAiMCIKICAgIG9zLmVudmlyb25bIlNVTk9fVVNFX1NNQUxMX01PREVMUyJdID0gIjAiCiAgICBvcy5lbnZpcm9uWyJTVU5PX09GRkxPQURfQ1BVIl0gPSAiMCIKCiAgICBmcm9tIGJhcmsuZ2VuZXJhdGlvbiBpbXBvcnQgZ2VuZXJhdGVfdGV4dF9zZW1hbnRpYywgcHJlbG9hZF9tb2RlbHMKICAgIGZyb20gYmFyayBpbXBvcnQgZ2VuZXJhdGVfYXVkaW8sIFNBTVBMRV9SQVRFCgogICAgcHJlbG9hZF9tb2RlbHMoKQoKICAgIGRlZiBnZW5lcmF0ZSgpOgogICAgICAgIHNlbnRlbmNlcyA9IG5sdGsuc2VudF90b2tlbml6ZSh0ZXh0LnJlcGxhY2UoIlxuIiwgIiAiKS5zdHJpcCgpKQogICAgICAgIGZvciBpLCBzZW50ZW5jZSBpbiBlbnVtZXJhdGUoc2VudGVuY2VzKToKICAgICAgICAgICAgbG9nZ2luZy5pbmZvKAogICAgICAgICAgICAgICAgIkdlbmVyYXRpbmcgc2VudGVuY2UgJWQvJWQ6ICVzIiwgaSArIDEsIGxlbihzZW50ZW5jZXMpLCBzZW50ZW5jZQogICAgICAgICAgICApCiAgICAgICAgICAgIHdhdl9hcnJheSA9IGdlbmVyYXRlX2F1ZGlvKHNlbnRlbmNlLCBoaXN0b3J5X3Byb21wdD1zcGVha2VyKQogICAgICAgICAgICBidWYgPSBpby5CeXRlc0lPKCkKICAgICAgICAgICAgd3JpdGVfd2F2KGJ1ZiwgU0FNUExFX1JBVEUsIHdhdl9hcnJheSkKICAgICAgICAgICAgeWllbGQgYnVmLnJlYWQoKQoKICAgIHJldHVybiBnZW5lcmF0ZSgpLCB7IkNvbnRlbnQtVHlwZSI6ICJhdWRpby9tcGVnIn0KCiAgICAgIDwvY29kZT4KICAgIDwvcHJlPgogIDwvYm9keT4KPC9odG1sPgonJycpCiAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICByZXR1cm4gc3RyKGUpCg%3d%3d
+: http://localhost:9876/?code_b64=CmRlZiBydW4oXyk6CiAgcmV0dXJuIChyJycnCjwhZG9jdHlwZSBodG1sPgo8aHRtbD4KICA8aGVhZD4KICAgIDx0aXRsZT5iYXJrIHRlc3Q8L3RpdGxlPgogICAgPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSJodHRwczovL2Nkbi5zaW1wbGVjc3Mub3JnL3NpbXBsZS5taW4uY3NzIj4KICAgIDxzY3JpcHQ%2bCmZ1bmN0aW9uIG1ha2VSZXF1ZXN0KGNvZGUsIHRleHQpIHsKICByZXR1cm4gewogICAgJ2NvZGVfYjY0JzogYnRvYShjb2RlKSwKICAgICdrd2FyZ3NfYjY0JzogYnRvYSgneyJ0ZXh0IjogIicgKyB0ZXh0ICsgJyJ9JykKICB9Owp9Cgphc3luYyBmdW5jdGlvbiBnZXRBdWRpbyh1cmwsIGNvZGUsIHRleHQsIG9uQ2h1bmssIG9uRG9uZSkgewogIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2godXJsLCB7CiAgICAgIG1ldGhvZDogJ1BPU1QnLAogICAgICBoZWFkZXJzOiB7CiAgICAgICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL2pzb24nLAogICAgICB9LAogICAgICBib2R5OiBKU09OLnN0cmluZ2lmeShtYWtlUmVxdWVzdChjb2RlLCB0ZXh0KSkKICB9KTsKICBjb25zdCByZWFkZXIgPSByZXNwb25zZS5ib2R5LmdldFJlYWRlcigpOwogIGxldCByZXN1bHQgPSBhd2FpdCByZWFkZXIucmVhZCgpOwogIHdoaWxlICghcmVzdWx0LmRvbmUpIHsKICAgIGNvbnN0IGNodW5rID0gcmVzdWx0LnZhbHVlOwogICAgY29uc29sZS5sb2coInJlc3VsdCBpcyIsIHJlc3VsdCkKICAgIGNvbnNvbGUubG9nKCJjaHVuayBpcyIsIGNodW5rKQogICAgb25DaHVuayhjaHVuaykKICAgIHJlc3VsdCA9IGF3YWl0IHJlYWRlci5yZWFkKCkKICB9CiAgb25Eb25lKCk7Cn0KCjwvc2NyaXB0PgogICAgPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PgogICAgPHNjcmlwdD4KICAgICAgZnVuY3Rpb24gY29kZSgpIHsKICAgICAgICByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHVybCgpIHsKICAgICAgICByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyAgIAogICAgICB9CgogICAgICBmdW5jdGlvbiBiYXJrVGV4dCgpIHsKICAgICAgICByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gYXVkaW9VcmwoY29kZSwgdGV4dCkgewogICAgICAgIGNvbnN0IHJlcXVlc3QgPSBtYWtlUmVxdWVzdChjb2RlLCB0ZXh0KTsKICAgICAgICByZXR1cm4gdXJsKCkgKyAnPycgKyAkLnBhcmFtKHJlcXVlc3QpOwogICAgICB9CgogICAgICBmdW5jdGlvbiBhdWRpb0NodW5rSGFuZGxlcihjaHVuaykgewogICAgICAgIGNvbnNvbGUubG9nKCdhdWRpbyBjaHVuaycsIGNodW5rKTsKICAgICAgICBjb25zdCBibG9iID0gbmV3IEJsb2IoW2NodW5rXSwgeyB0eXBlOiAnYXVkaW8vd2F2JyB9KTsKICAgICAgICBzZXRBdWRpb0RhdGFVUkwoYmxvYik7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIGF1ZGlvRG9uZUhhbmRsZXIoKSB7CiAgICAgICAgY29uc29sZS5sb2coJ2F1ZGlvIGRvbmUnKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gaGFuZGxlU3BlYWsoKSB7CiAgICAgICAgcmV0dXJuIGdldEF1ZGlvKHVybCgpLCBjb2RlKCksIGJhcmtUZXh0KCksIGF1ZGlvQ2h1bmtIYW5kbGVyLCBhdWRpb0RvbmVIYW5kbGVyKTsKICAgICAgfQoKICAgICAgY29uc3QgYXVkaW8gPSBuZXcgQXVkaW8oKTsKCiAgICAgIGZ1bmN0aW9uIG1ha2VBdWRpbyhibG9iKSB7CiAgICAgICAgY29uc3QgdGltZSA9IGF1ZGlvLmN1cnJlbnRUaW1lOwogICAgICAgIGF1ZGlvLnNyYyA9IFVSTC5jcmVhdGVPYmplY3RVUkwoYmxvYik7CiAgICAgICAgYXVkaW8uY29udHJvbHMgPSB0cnVlOwogICAgICAgIGF1ZGlvLnBsYXkoKS50aGVuKCgpID0%2bIHsKICAgICAgICAgIGF1ZGlvLmN1cnJlbnRUaW1lID0gdGltZTsKICAgICAgICB9KS5jYXRjaCgoZXJyb3IpID0%2bIHsKICAgICAgICAgIGNvbnNvbGUuZXJyb3IoJ2F1ZGlvIHBsYXkgZXJyb3InLCBlcnJvcik7CiAgICAgICAgfSk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHNldEF1ZGlvRGF0YVVSTChibG9iKSB7CiAgICAgICAgY29uc3QgYXVkaW9EaXYgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnYmFyay1vdXRwdXQnKTsKICAgICAgICBhdWRpb0Rpdi5yZXBsYWNlQ2hpbGRyZW4oYXVkaW8pOwogICAgICAgIGNvbnNvbGUubG9nKCdzZXR0aW5nIGF1ZGlvIGRhdGEgdXJsJywgYmxvYik7CiAgICAgICAgbWFrZUF1ZGlvKGJsb2IpOwogICAgICB9CiAgICA8L3NjcmlwdD4KICA8L2hlYWQ%2bCiAgPGJvZHk%2bCiAgICA8bGFiZWwgZm9yPSJ1cmwiPkV4ZWMgVVJMPC9sYWJlbD4KICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idXJsIiB2YWx1ZT0iaHR0cDovL2xvY2FsaG9zdDo5ODc2L3Rlc3Qud2F2Ij48L2lucHV0PgogICAgPGxhYmVsIGZvcj0iYmFyay1pbnB1dCI%2bVGV4dCB0byBzcGVhazwvbGFiZWw%2bCiAgICA8dGV4dGFyZWEgaWQ9ImJhcmstaW5wdXQiPlRlc3Qgc2VudGVuY2UuIEFuZCBhIHNlY29uZCB0ZXN0LjwvdGV4dGFyZWE%2bCiAgICA8YnV0dG9uIG9uY2xpY2s9ImhhbmRsZVNwZWFrKCkiPlNwZWFrPC9idXR0b24%2bCiAgICA8ZGl2IGlkPSJiYXJrLW91dHB1dCI%2bPC9kaXY%2bCiAgICA8cHJlPgogICAgICA8Y29kZSBpZD0iY29kZSIgY29udGVudGVkaXRhYmxlPSJ0cnVlIj4KIyBleGFtcGxlL2JhcmsvYmFyay5weQoKCmRlZiBydW4ocmVxdWVzdCwgdGV4dDogc3RyLCBzcGVha2VyOiBzdHIgPSAidjIvZW5fc3BlYWtlcl82Iik6CiAgICBpbXBvcnQgb3MKICAgIGltcG9ydCBsb2dnaW5nCiAgICBpbXBvcnQgaW8KICAgIGltcG9ydCBubHRrCiAgICBpbXBvcnQgbnVtcHkgYXMgbnAKICAgIGZyb20gc2NpcHkuaW8ud2F2ZmlsZSBpbXBvcnQgd3JpdGUgYXMgd3JpdGVfd2F2CgogICAgb3MuZW52aXJvblsiQ1VEQV9WSVNJQkxFX0RFVklDRVMiXSA9ICIwIgogICAgb3MuZW52aXJvblsiU1VOT19VU0VfU01BTExfTU9ERUxTIl0gPSAiMCIKICAgIG9zLmVudmlyb25bIlNVTk9fT0ZGTE9BRF9DUFUiXSA9ICIwIgoKICAgIGZyb20gYmFyay5nZW5lcmF0aW9uIGltcG9ydCBnZW5lcmF0ZV90ZXh0X3NlbWFudGljLCBwcmVsb2FkX21vZGVscwogICAgZnJvbSBiYXJrIGltcG9ydCBnZW5lcmF0ZV9hdWRpbywgU0FNUExFX1JBVEUKCiAgICBwcmVsb2FkX21vZGVscygpCgogICAgZGVmIGdlbmVyYXRlKCk6CiAgICAgICAgc2VudGVuY2VzID0gbmx0ay5zZW50X3Rva2VuaXplKHRleHQucmVwbGFjZSgiXG4iLCAiICIpLnN0cmlwKCkpCiAgICAgICAgZnVsbF93YXZfYXJyYXkgPSBOb25lCiAgICAgICAgZm9yIGksIHNlbnRlbmNlIGluIGVudW1lcmF0ZShzZW50ZW5jZXMpOgogICAgICAgICAgICBsb2dnaW5nLmluZm8oCiAgICAgICAgICAgICAgICAiR2VuZXJhdGluZyBzZW50ZW5jZSAlZC8lZDogJXMiLCBpICsgMSwgbGVuKHNlbnRlbmNlcyksIHNlbnRlbmNlCiAgICAgICAgICAgICkKICAgICAgICAgICAgd2F2X2FycmF5ID0gZ2VuZXJhdGVfYXVkaW8oc2VudGVuY2UsIGhpc3RvcnlfcHJvbXB0PXNwZWFrZXIpCiAgICAgICAgICAgIGZ1bGxfd2F2X2FycmF5ID0gKAogICAgICAgICAgICAgICAgd2F2X2FycmF5CiAgICAgICAgICAgICAgICBpZiBmdWxsX3dhdl9hcnJheSBpcyBOb25lCiAgICAgICAgICAgICAgICBlbHNlIG5wLmNvbmNhdGVuYXRlKChmdWxsX3dhdl9hcnJheSwgd2F2X2FycmF5KSkKICAgICAgICAgICAgKQogICAgICAgICAgICBpZiBpID09IGxlbihzZW50ZW5jZXMpIC0gMToKICAgICAgICAgICAgICAgIGJ1ZiA9IGlvLkJ5dGVzSU8oKQogICAgICAgICAgICAgICAgd3JpdGVfd2F2KGJ1ZiwgU0FNUExFX1JBVEUsIGZ1bGxfd2F2X2FycmF5KQogICAgICAgICAgICAgICAgeWllbGQgYnVmLnJlYWQoKQoKICAgIHJldHVybiBnZW5lcmF0ZSgpLCB7IkNvbnRlbnQtVHlwZSI6ICJhdWRpby9tcGVnIn0KCiAgICAgIDwvY29kZT4KICAgIDwvcHJlPgogIDwvYm9keT4KPC9odG1sPgoKJycnKQo%3d
 
 
 Whew. We can open that ~owt~ URL in a browser and play with the web app, which itself makes calls to ~owt~ injecting the TTS logic.
@@ -448,15 +449,15 @@ done
 #+results: 
 #+begin_example
 layer: owt-inside-owt
-Result:  Hello, owt-inside-owt, from 0.0.0.0:9877!
+Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9877): Max retries exceeded with url: /?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKCmRlZiBydW4ocmVxdWVzdCwgbmFtZT1Ob25lKToKICAgIHJldHVybiBmIkhlbGxvLCB7bmFtZX0sIGZyb20ge1NlcnZlci5zaW5nKCkuYWRkcmVzc306e1NlcnZlci5zaW5nKCkucG9ydH0hIgo%3D&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0In0K (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffee29963c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
 layer: owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9878!
 layer: owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9879!
+Result: 
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9880!
+Result: 
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9881!
+Result: 
 #+end_example
 
 Hoo boy. How is Python a real language.
@@ -464,3 +465,4 @@ Hoo boy. How is Python a real language.
 - [ ] ~owt.summat~ building blocks for common operations
 - [ ] Tiny client libraries
 - [ ] Split into ~owt serve~ and ~owt encode some_file.py {arg:value}~
+- [ ] Force-cache e.g. hit /favicon.ico in a way that responds with image bytes, and forces these image bytes for all future /favicon.ico GETs

@@ -31,7 +31,7 @@ Which can be called from any language with a tiny client:
 // app.js
 
 const url = owtify('http://localhost:9876', 'adaptor.py', {'prompt': 'output SOTA results'});
-const response = await fetch(url, {});
+const response = await fetch(url, {...});
 #+END_SRC
 
 The client-free version isn't very complex either:
@@ -46,7 +46,7 @@ curl -G \
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
 
-There's support for basic auth via ~--auth="username:sha256(password)"~ but still, exercise caution. It would not be difficult to accidentally make an ~owt~ API call that irreversibly destroyed your own machine.
+There's support for basic auth via ~owt --auth="username:sha256(password)"~ but still, exercise caution. It would not be difficult to accidentally make an ~owt~ API call that irreversibly destroyed your own machine.
 
 *** Why?
 
@@ -260,3 +260,4 @@ Hoo boy. How is Python a real language.
 - [ ] ~owt.summat~ building blocks for common operations
 - [ ] Tiny client libraries
 - [ ] Split into ~owt serve~ and ~owt encode some_file.py {arg:value}~
+- [ ] Force-cache e.g. hit /favicon.ico in a way that responds with image bytes, and forces these image bytes for all future /favicon.ico GETs

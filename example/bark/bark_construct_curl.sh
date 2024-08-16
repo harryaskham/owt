@@ -12,11 +12,9 @@ with open('example/bark/bark.html', 'r') as html_f:
                            '<script>\n'+js_f.read()+'\n</script>'))
       print('''
 def run(_):
-  from flask import render_template
-  try:
-      render_template(\'\'\''''+template+'''\'\'\')
-  except Exception as e:
-      return str(e)''')
+  return (r\'\'\'
+'''+template+'''
+\'\'\')''')
 EOF
 )
 CODE_B64=$(base64 -w 0 <<< "$CODE")
