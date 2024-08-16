@@ -2,10 +2,29 @@
 
 Serve up owt yer fancy on t'fly.
 
-
 ** What's This?
 
 A Flask app exposing an endpoint whose request handling behaviour is configured by the request itself.
+
+For example:
+
+#+BEGIN_SRC python
+# adaptor.py
+from big.research.lab import fancy_ai
+
+def run(_, prompt):
+    return fancy_ai.do_something(prompt)
+#+END_SRC
+
+Which can be called from any language with a tiny client:
+
+#+BEGIN_SRC javascript
+// client.js
+const url = owtify('adaptor.py', {'prompt': 'output SOTA results'});
+const response = await fetch(url);
+// ...
+#+END_SRC
+
 
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
@@ -21,7 +40,6 @@ The primary motivation is rapid prototyping against new machine learning models 
    - Or, now your software only works inside a virtualenv.
 2. Spawn ~python some_project.py --flag=...~" as a child process
    - Handle communication over stdin/out/err can be a pain.
-   - Wrapping
 3. Docker-ify it
    - Long; CUDA can be annoying; still need to expose the logic by one of the other methods.
 4. Building a lightweight API backend exposing the Python logic and writing client code in your language of choice
