@@ -1,26 +1,26 @@
-function makeRequest(code, text) {
+function makeRequest(code, text, speaker) {
   return {
     'code_b64': btoa(code),
-    'kwargs_b64': btoa('{"text": "' + text + '"}')
+    'kwargs_b64': btoa(JSON.stringify({
+      'text': text,
+      'speaker': speaker
+    })),
   };
 }
 
-async function getAudio(url, code, text, onChunk, onDone) {
-  const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(makeRequest(code, text))
-  });
-  const reader = response.body.getReader();
-  let result = await reader.read();
-  while (!result.done) {
-    const chunk = result.value;
-    console.log("result is", result)
-    console.log("chunk is", chunk)
-    onChunk(chunk)
-    result = await reader.read()
+function audioUrl(url, code, text, speaker) {
+  const request = makeRequest(code, text, speaker);
+  return url + '?' + $.param(request);
+}
+
+async function getAudio(url, code, text, speaker, onChunk) {
+  const source = new EventSource(audioUrl(url, code, text, speaker));
+  source.onmessage = function(event) {
+    if (event.data.toLowerCase() == 'done') {
+      source.close();
+      return;
+    }
+    const chunk = JSON.parse(event.data);
+    onChunk(chunk);
   }
-  onDone();
 }

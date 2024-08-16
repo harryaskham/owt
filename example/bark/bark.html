@@ -14,55 +14,62 @@
         return $("#url").val();   
       }
 
+      function speaker() {
+        return $("#speaker").val();   
+      }
+
       function barkText() {
         return $('#bark-input').val();
       }
 
-      function audioUrl(code, text) {
-        const request = makeRequest(code, text);
-        return url() + '?' + $.param(request);
-      }
-
       function audioChunkHandler(chunk) {
         console.log('audio chunk', chunk);
-        const blob = new Blob([chunk], { type: 'audio/wav' });
+        wavB64 = chunk['cumulative'];
+        console.log('audio chunk b64', wavB64);
+        wavData = Uint8Array.from(atob(wavB64), c => c.charCodeAt(0))
+        console.log('audio chunk data', wavData);
+        const blob = new Blob([wavData], { type: 'audio/wav' });
         setAudioDataURL(blob);
       }
 
-      function audioDoneHandler() {
-        console.log('audio done');
-      }
-
       function handleSpeak() {
-        return getAudio(url(), code(), barkText(), audioChunkHandler, audioDoneHandler);
+        return getAudio(url(), code(), barkText(), speaker(), audioChunkHandler);
       }
 
       const audio = new Audio();
 
       function makeAudio(blob) {
-        const time = audio.currentTime;
+        const time = audio.currentTime || audio.duration;
         audio.src = URL.createObjectURL(blob);
         audio.controls = true;
         audio.play().then(() => {
-          audio.currentTime = time;
+          if (time) {
+            audio.currentTime = time;
+          }
         }).catch((error) => {
           console.error('audio play error', error);
         });
       }
 
       function setAudioDataURL(blob) {
-        const audioDiv = document.getElementById('bark-output');
-        audioDiv.replaceChildren(audio);
         console.log('setting audio data url', blob);
         makeAudio(blob);
       }
+
+      $(function() {
+          const audioDiv = document.getElementById('bark-output');
+          audioDiv.replaceChildren(audio);
+      });
     </script>
   </head>
   <body>
     <label for="url">Exec URL</label>
-    <input type="text" id="url" value="http://localhost:9876/test.wav"></input>
+    <input type="text" id="url" value="http://localhost:9876"></input>
     <label for="bark-input">Text to speak</label>
-    <textarea id="bark-input">Test sentence. And a second test.</textarea>
+    <textarea id="bark-input">Hoist the load to your left shoulder. Take the winding path to reach the lake. Note closely the size of the gas tank. Wipe the grease off his dirty face. Mend the coat before you go out. The wrist was badly strained and hung limp. The stray cat gave birth to kittens. The young girl gave no clear response. The meal was cooked before the bell rang. What joy there is in living.</textarea>
+    <label for="speaker">Speaker</label>
+    <input type="text" id="speaker" value="v2/en_speaker_9"></input>
+    </select>
     <button onclick="handleSpeak()">Speak</button>
     <div id="bark-output"></div>
     <pre>
