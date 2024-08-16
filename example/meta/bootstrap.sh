@@ -8,7 +8,7 @@ def run(request, payload_code_b64, payload_kwargs_b64):
   _globals = {'__name__': __name__+'_new',
               'new_port': args.port + 1}
   _locals = {}
-  print(f'Going one level down to port {_globals['new_port']}...')
+  print('going one level down to port %s' % _globals['new_port'])
 
   exec('''
 print('One level deeper, importing owt')
@@ -20,8 +20,8 @@ server_thread = Process(target=main)
 
   def kill():
     import time
-    time.sleep(10)
-    print(f'Killing server on {args.port}')
+    # time.sleep(1)
+    print('Killing server on %s' % args.port)
     _locals['server_thread'].terminate()
     print('Killed server on %d' % args.port)
 
