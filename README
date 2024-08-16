@@ -22,7 +22,7 @@ Which can be called from any language with a tiny client:
 // client.js
 const url = owtify('adaptor.py', {'prompt': 'output SOTA results'});
 const response = await fetch(url);
-// ...
+...
 #+END_SRC
 
 

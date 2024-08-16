@@ -24,7 +24,7 @@ Which can be called from any language with a tiny client:
 // client.js
 const url = owtify('adaptor.py', {'prompt': 'output SOTA results'});
 const response = await fetch(url);
-// ...
+...
 #+end_src
 *** Security
 *This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
