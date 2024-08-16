@@ -1,3 +1,126 @@
-* owt
+* Owt
 
-Lightweight endpoints for serving owt yer like
+Serve up owt yer fancy on t'fly.
+
+
+** What's This?
+
+A Flask app exposing an endpoint whose request handling behaviour is configured by the request itself.
+
+*** Security
+*This works by evaluating arbitrary user-supplied strings as code. This is grossly insecure by its very nature; don't expose it to the internet!*
+
+There's support for basic auth via ~--auth="username:sha256(password)"~ but still, exercise caution. It would not be difficult to accidentally make an ~owt~ API call that irreversibly destroyed your own machine.
+
+*** Why?
+
+The primary motivation is rapid prototyping against new machine learning models from languages other than Python. So often the newest hotness drops with a checkpoint and a Python client, and using this outside of the specific ecosystem in which it is designed to run means one of:
+
+1. FFI-wrapping the library to get native-looking calls in your language (or use an embedded Python if your language has it)
+   - Painful and bespoke-to-each-new-library work to figure out how to make all necessary requirements, virtualenv setup, CUDA flags, etc available.
+   - Or, now your software only works inside a virtualenv.
+2. Spawn ~python some_project.py --flag=...~" as a child process
+   - Handle communication over stdin/out/err can be a pain.
+   - Wrapping
+3. Docker-ify it
+   - Long; CUDA can be annoying; still need to expose the logic by one of the other methods.
+4. Building a lightweight API backend exposing the Python logic and writing client code in your language of choice
+   - Annoying boilerplate, the time between "I can run ~python generate.py --animal=cat > pic.png~ on my machine" and "I have some ~generate :: Animal -> IO Image~" can be >1h.
+   - Either one new service for every new library you want to test out, or now you need to maintain a growing monolith of unrelated endpoints
+
+~owt~ aims to make #4 less painful, at the cost of security and sanity, by providing a single service capable of serving arbitrary new logic without requiring changes to ~owt~ itself.
+
+*** How?
+The cost of supporting some new system is pushed to the client, who must send adaptor code (a request handler, essentially) along with the request. This creates a virtual endpoint on the fly, giving complete control over the serving logic to the API user.
+
+Writing the adaptor code is a one-time cost for each new virtual endpoint, made cheaper by having access to ~owt.summat~, a collection of composable building blocks.
+
+*** Examples
+
+The following examples (in ~example/~) could all be run one-by-one without any need to restart or rebuild ~owt~. The first one is shown a few different ways to give a flavour of usage. Subsequent examples just show ~curl~ in tandem with an adaptor ~.py~ file, but it's easy to see how one could extend from here to call to ~owt~ from any other language.
+
+**** Echo Server
+By default, the function named ~run(request, **kwargs)~ in the user-supplied code will be used to handle the request.
+Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kwargs_b64~ is ~eval~'d to get the resulting dictionary, so can itself contain richer logic to build up arguments.
+
+***** As a self-contained shell script
+#+INCLUDE: "example/echo/echo_script.sh" src bash
+#+BEGIN_SRC bash :exports both :results html
+./example/echo/echo_script.sh http://localhost:9876
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+Hello, owt!
+#+end_export
+
+***** As a Python file + script
+#+INCLUDE: "example/echo/echo.py" src python
+
+Passing data via POST JSON ~kwargs~:
+#+INCLUDE: "example/echo/echo_kwargs.sh" src bash
+#+BEGIN_SRC bash :exports both :results html
+./example/echo/echo_kwargs.sh http://localhost:9876
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+Hello, owt!
+#+end_export
+
+Passing data via GET in the path:
+#+INCLUDE: "example/echo/echo_request.sh" src bash
+#+BEGIN_SRC bash :exports both :results html
+./example/echo/echo_request.sh http://localhost:9876
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+<!doctype html>
+<html lang=en>
+<title>404 Not Found</title>
+<h1>Not Found</h1>
+<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+#+end_export
+
+**** Text to Speech API
+A more complex example demonstrating wrapping Suno's OSS TTS model [https://github.com/suno-ai/bark](Bark).
+The client provides an adaptor that responds with a stream of bytes, allowing the generated audio to be streamed in chunks, sentence-by-sentence.
+Responses are cached for the lifetime of the ~owt~ server for each combination of ~(text, speaker)~.
+The ~preload_models()~ call makes the first call take a while as VRAM is populated, but the weights remain in memory so subsequent calls are cheaper.
+To avoid this breaking other ~owt~ uses, one can spin up multiple instances of ~owt~, each handling a different kind of task and with different resource profiles.
+
+***** Python Adaptor
+#+INCLUDE: "example/bark/bark.py" src python
+
+***** Save audio via cURL
+#+INCLUDE: "example/bark/bark.sh" src bash
+
+***** Stream audio via JS
+See ~example/bark/bark.html~ for usage.
+#+INCLUDE: "example/bark/bark.js" src javascript
+
+***** Ad-hoc Web Server
+In fact we can go one step further and create an adhoc endpoint that serves us the rendered ~bark.html~ Jinja2 template.
+
+The ~owt~ arguments can be passed as GET query parameters as well as POST JSON data, so we can actually write a handler that embeds the entire HTML into the query with this Python-in-Python-in-Bash curiosity:
+
+#+INCLUDE: "example/bark/bark_construct_url.sh" src bash
+
+#+BEGIN_SRC bash :exports both :results html
+./example/bark/bark_construct_curl.sh http://localhost:9876
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+curl -w -G --data-urlencode 'code_b64=InRlbXBsYXRlX2h0bWwgPSAoJycnPCFkb2N0eXBlIGh0bWw+IDxodG1sPiA8aGVhZD4gPHRpdGxlPmJhcmsgdGVzdDwvdGl0bGU+IDxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iaHR0cHM6Ly9jZG4uc2ltcGxlY3NzLm9yZy9zaW1wbGUubWluLmNzcyI+IDxzY3JpcHQgc3JjPSIvYmFyay9iYXJrLmpzIj48L3NjcmlwdD4gPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PiA8c2NyaXB0PiBmdW5jdGlvbiBjb2RlKCkgeyByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7IH0gZnVuY3Rpb24gdXJsKCkgeyByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyB9IGZ1bmN0aW9uIGJhcmtUZXh0KCkgeyByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsgfSBmdW5jdGlvbiBhdWRpb1VybCgpIHsgY29uc3QgcmVxdWVzdCA9IG1ha2VSZXF1ZXN0KGNvZGUoKSwgdGV4dCgpKTsgcmV0dXJuIHVybCgpICsgJz8nICsgJC5wYXJhbShyZXF1ZXN0KTsgfSBmdW5jdGlvbiBhdWRpb0NodW5rSGFuZGxlcihjaHVuaykgeyBjb25zb2xlLmxvZygnYXVkaW8gY2h1bmsnLCBjaHVuayk7IHNldEF1ZGlvRGF0YVVSTChbY2h1bmtdKTsgfSBmdW5jdGlvbiBhdWRpb0RvbmVIYW5kbGVyKCkgeyBjb25zb2xlLmxvZygnYXVkaW8gZG9uZScpOyB9IGNvbnN0IGF1ZGlvID0gbmV3IEF1ZGlvKCk7IGZ1bmN0aW9uIHNldEF1ZGlvRGF0YVVSTCh2YWx1ZXMpIHsgY29uc29sZS5sb2coJ3NldHRpbmcgYXVkaW8gZGF0YSB1cmwnLCB2YWx1ZXMpOyBjb25zdCBibG9iID0gbmV3IEJsb2IodmFsdWVzLCB7IHR5cGU6ICdhdWRpby93YXYnIH0pOyBjb25zb2xlLmxvZygnc2V0dGluZyBhdWRpbyBkYXRhIHVybCcsIHZhbHVlcywgYmxvYik7IGF1ZGlvLnNyYyA9IFVSTC5jcmVhdGVPYmplY3RVUkwoYmxvYik7IGF1ZGlvLnBsYXkoKTsgfSAkKGZ1bmN0aW9uKCkgeyBjb25zb2xlLmxvZygic2V0dGluZyBkb3dubG9hZCIpOyAkKCIjZG93bmxvYWQiKS5hdHRyKCdocmVmJywgYXVkaW9VcmwoKSk7IGNvbnN0IGF1ZGlvRGl2ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Jhcmstb3V0cHV0Jyk7IGF1ZGlvLmNvbnRyb2xzID0gdHJ1ZTsgYXVkaW9EaXYuYXBwZW5kQ2hpbGQoYXVkaW8pOyBhdWRpby5hZGRFdmVudExpc3RlbmVyKCdsb2FkZWRkYXRhJywgKCkgPT4geyBhdWRpby5wbGF5KCk7IH0pOyB9KTsgPC9zY3JpcHQ+IDwvaGVhZD4gPGJvZHk+IDxsYWJlbCBmb3I9InVybCI+RXhlYyBVUkw8L2xhYmVsPiA8aW5wdXQgdHlwZT0idGV4dCIgaWQ9InVybCIgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6OTg3Ni90ZXN0LndhdiI+PC9pbnB1dD4gPGxhYmVsIGZvcj0iYmFyay1pbnB1dCI+VGV4dCB0byBzcGVhazwvbGFiZWw+IDx0ZXh0YXJlYSBpZD0iYmFyay1pbnB1dCI+VGVzdCBzZW50ZW5jZS4gQW5kIGEgc2Vjb25kIHRlc3QuPC90ZXh0YXJlYT4gPGJ1dHRvbiBvbmNsaWNrPSJnZXRBdWRpbyh1cmwoKSwgY29kZSgpLCB0ZXh0KCksIGF1ZGlvQ2h1bmtIYW5kbGVyLCBhdWRpb0RvbmVIYW5kbGVyKSI+U3BlYWs8L2J1dHRvbj4gPGRpdiBpZD0iYmFyay1vdXRwdXQiPjwvZGl2PiA8YSBpZD0iZG93bmxvYWQiIGhyZWY9IiI+RG93bmxvYWQgU3BlZWNoPC9hPiA8cHJlPiA8Y29kZSBpZD0iY29kZSIgY29udGVudGVkaXRhYmxlPSJ0cnVlIj4geyUgaW5jbHVkZSAiYmFyay5weSIgJX0gPC9jb2RlPiA8L3ByZT4gPC9ib2R5PiA8L2h0bWw+ICcnJykgZGVmIHJ1bihfKTogZnJvbSBmbGFzayBpbXBvcnQgcmVuZGVyX3RlbXBsYXRlIHJldHVybiByZW5kZXJfdGVtcGxhdGUodGVtcGxhdGVfaHRtbCkiCg==' http://localhost:9876
+#+end_export
+
+#+BEGIN_SRC bash :exports both :results html
+./example/bark/bark_construct_curl.sh http://localhost:9876 | xargs -0 -I{} bash -c "{}"
+#+END_SRC
+
+#+RESULTS:
+#+begin_export html
+Error executing Unsafe code: Error executing Unsafe code: No 'run' method defined in codehttp://localhost:9876/?code_b64=Cg%3d%3d
+#+end_export

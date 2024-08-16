@@ -30,6 +30,6 @@ in
       source ./$VENV/bin/activate
       pip install -r requirements.txt
       python -c "import nltk; nltk.download('punkt')"
-      zsh
+      tmux
     '';
   }

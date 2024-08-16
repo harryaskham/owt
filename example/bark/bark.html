@@ -3,6 +3,7 @@
   <head>
     <title>bark test</title>
     <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <script src="/bark/bark.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
     <script>
       function code() {
@@ -13,47 +14,24 @@
         return $("#url").val();   
       }
 
-      function makeRequest() {
-        const barkText = $('#bark-input').val();
-        return {
-          'code_b64': btoa(code()),
-          'fn_name': 'run',
-          'kwargs_b64': btoa('{"text": "' + barkText + '"}')
-        };
+      function barkText() {
+        return $('#bark-input').val();
       }
 
+
       function audioUrl() {
-        const request = makeRequest();
+        const request = makeRequest(code(), text());
         return url() + '?' + $.param(request);
       }
 
-      async function getAudio() {
-        let response = await fetch(url(), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(makeRequest())
-        });
-        console.log('Chunk requested');
-        console.log('status', response.status);
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-        const reader = response.body.getReader();
-        reader.read().then(({ done, value }) => {
-          if (value) {
-            setAudioDataURL([value]);
-          } 
 
-          // When no more data needs to be consumed, close the stream
-          if (done) {
-            controller.close();
-          }
-          // Enqueue the next data chunk into our target stream
-          controller.enqueue(value);
-          return go();
-        });
+      function audioChunkHandler(chunk) {
+        console.log('audio chunk', chunk);
+        setAudioDataURL([chunk]);
+      }
+
+      function audioDoneHandler() {
+        console.log('audio done');
       }
 
       const audio = new Audio();
@@ -80,10 +58,10 @@
   </head>
   <body>
     <label for="url">Exec URL</label>
-    <input type="text" id="url" value="http://localhost:9876/unsafe/exec/test.wav"></input>
+    <input type="text" id="url" value="http://localhost:9876/test.wav"></input>
     <label for="bark-input">Text to speak</label>
     <textarea id="bark-input">Test sentence. And a second test.</textarea>
-    <button onclick="getAudio()">Speak</button>
+    <button onclick="getAudio(url(), code(), text(), audioChunkHandler, audioDoneHandler)">Speak</button>
     <div id="bark-output"></div>
     <a id="download" href="">Download Speech</a>
     <pre>
