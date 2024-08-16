@@ -1,4 +1,4 @@
-# Created 2024-08-16 Fri 21:49
+# Created 2024-08-16 Fri 21:52
 #+title: 
 #+author: Harry Askham
 #+name: shell_out
@@ -81,6 +81,7 @@ The following examples (in ~example/~) could all be run one-by-one without any n
 By default, the function named ~run(request, **kwargs)~ in the user-supplied code will be used to handle the request.
 Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kwargs_b64~ is ~eval~'d to get the resulting dictionary, so can itself contain richer logic to build up arguments.
 ***** As a self-contained shell script
+~example/echo/echo_script.sh~
 #+begin_src bash
 URL="$1"
 
@@ -391,6 +392,7 @@ bash -c "$CMD"
 
 Oh no... but that would mean you could... I wonder...
 
+~example/meta/bootstrap.py~
 #+begin_src python
 def run(request, payload_code_b64, payload_kwargs_b64):
     import os

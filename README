@@ -86,6 +86,7 @@ By default, the function named ~run(request, **kwargs)~ in the user-supplied cod
 Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kwargs_b64~ is ~eval~'d to get the resulting dictionary, so can itself contain richer logic to build up arguments.
 
 ***** As a self-contained shell script
+~example/echo/echo_script.sh~
 #+INCLUDE: "example/echo/echo_script.sh" src bash
 
 #+BEGIN_SRC bash :exports both :results output replace :post shell_out(data=*this*)
@@ -213,6 +214,7 @@ bash -c "$CMD"
 
 Oh no... but that would mean you could... I wonder...
 
+~example/meta/bootstrap.py~
 #+INCLUDE: "example/meta/bootstrap.py" src python
 
 #+BEGIN_SRC bash :exports both :results output replace :post shell_out(data=*this*) :noeval
