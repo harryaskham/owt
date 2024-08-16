@@ -19,8 +19,8 @@
       }
 
 
-      function audioUrl() {
-        const request = makeRequest(code(), text());
+      function audioUrl(code, text) {
+        const request = makeRequest(code, text);
         return url() + '?' + $.param(request);
       }
 
@@ -34,6 +34,10 @@
         console.log('audio done');
       }
 
+      function handleSpeak() {
+        return getAudio(url(), code(), text(), audioChunkHandler, audioDoneHandler);
+      }
+
       const audio = new Audio();
 
       function setAudioDataURL(values) {
@@ -45,8 +49,6 @@
       }
 
       $(function() {
-        console.log("setting download");
-        $("#download").attr('href', audioUrl());
         const audioDiv = document.getElementById('bark-output');
         audio.controls = true;
         audioDiv.appendChild(audio);
@@ -61,9 +63,8 @@
     <input type="text" id="url" value="http://localhost:9876/test.wav"></input>
     <label for="bark-input">Text to speak</label>
     <textarea id="bark-input">Test sentence. And a second test.</textarea>
-    <button onclick="getAudio(url(), code(), text(), audioChunkHandler, audioDoneHandler)">Speak</button>
+    <button onclick="handleSpeak">Speak</button>
     <div id="bark-output"></div>
-    <a id="download" href="">Download Speech</a>
     <pre>
       <code id="code" contenteditable="true">
 {% include "bark.py" %}

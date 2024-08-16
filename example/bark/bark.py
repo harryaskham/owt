@@ -16,8 +16,10 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
 
     def generate():
         sentences = nltk.sent_tokenize(text.replace("\n", " ").strip())
-        for sentence in sentences:
-            logging.info("Generating sentence: %s", sentence)
+        for i, sentence in enumerate(sentences):
+            logging.info(
+                "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
+            )
             wav_array = generate_audio(sentence, history_prompt=speaker)
             buf = io.BytesIO()
             write_wav(buf, SAMPLE_RATE, wav_array)

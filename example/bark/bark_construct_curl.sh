@@ -18,4 +18,4 @@ def run(_):
 EOF
 )
 CODE_B64=$(base64 -w 0 <<< "$CODE")
-echo "curl -w '%{url}' -G --data-urlencode \"code_b64=$CODE_B64\" $URL"
+echo "curl -G --data-urlencode \"code_b64=$CODE_B64\" $URL"
