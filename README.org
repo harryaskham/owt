@@ -116,11 +116,113 @@ The ~owt~ arguments can be passed as GET query parameters as well as POST JSON d
 curl -w -G --data-urlencode 'code_b64=InRlbXBsYXRlX2h0bWwgPSAoJycnPCFkb2N0eXBlIGh0bWw+IDxodG1sPiA8aGVhZD4gPHRpdGxlPmJhcmsgdGVzdDwvdGl0bGU+IDxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iaHR0cHM6Ly9jZG4uc2ltcGxlY3NzLm9yZy9zaW1wbGUubWluLmNzcyI+IDxzY3JpcHQgc3JjPSIvYmFyay9iYXJrLmpzIj48L3NjcmlwdD4gPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PiA8c2NyaXB0PiBmdW5jdGlvbiBjb2RlKCkgeyByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7IH0gZnVuY3Rpb24gdXJsKCkgeyByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyB9IGZ1bmN0aW9uIGJhcmtUZXh0KCkgeyByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsgfSBmdW5jdGlvbiBhdWRpb1VybCgpIHsgY29uc3QgcmVxdWVzdCA9IG1ha2VSZXF1ZXN0KGNvZGUoKSwgdGV4dCgpKTsgcmV0dXJuIHVybCgpICsgJz8nICsgJC5wYXJhbShyZXF1ZXN0KTsgfSBmdW5jdGlvbiBhdWRpb0NodW5rSGFuZGxlcihjaHVuaykgeyBjb25zb2xlLmxvZygnYXVkaW8gY2h1bmsnLCBjaHVuayk7IHNldEF1ZGlvRGF0YVVSTChbY2h1bmtdKTsgfSBmdW5jdGlvbiBhdWRpb0RvbmVIYW5kbGVyKCkgeyBjb25zb2xlLmxvZygnYXVkaW8gZG9uZScpOyB9IGNvbnN0IGF1ZGlvID0gbmV3IEF1ZGlvKCk7IGZ1bmN0aW9uIHNldEF1ZGlvRGF0YVVSTCh2YWx1ZXMpIHsgY29uc29sZS5sb2coJ3NldHRpbmcgYXVkaW8gZGF0YSB1cmwnLCB2YWx1ZXMpOyBjb25zdCBibG9iID0gbmV3IEJsb2IodmFsdWVzLCB7IHR5cGU6ICdhdWRpby93YXYnIH0pOyBjb25zb2xlLmxvZygnc2V0dGluZyBhdWRpbyBkYXRhIHVybCcsIHZhbHVlcywgYmxvYik7IGF1ZGlvLnNyYyA9IFVSTC5jcmVhdGVPYmplY3RVUkwoYmxvYik7IGF1ZGlvLnBsYXkoKTsgfSAkKGZ1bmN0aW9uKCkgeyBjb25zb2xlLmxvZygic2V0dGluZyBkb3dubG9hZCIpOyAkKCIjZG93bmxvYWQiKS5hdHRyKCdocmVmJywgYXVkaW9VcmwoKSk7IGNvbnN0IGF1ZGlvRGl2ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Jhcmstb3V0cHV0Jyk7IGF1ZGlvLmNvbnRyb2xzID0gdHJ1ZTsgYXVkaW9EaXYuYXBwZW5kQ2hpbGQoYXVkaW8pOyBhdWRpby5hZGRFdmVudExpc3RlbmVyKCdsb2FkZWRkYXRhJywgKCkgPT4geyBhdWRpby5wbGF5KCk7IH0pOyB9KTsgPC9zY3JpcHQ+IDwvaGVhZD4gPGJvZHk+IDxsYWJlbCBmb3I9InVybCI+RXhlYyBVUkw8L2xhYmVsPiA8aW5wdXQgdHlwZT0idGV4dCIgaWQ9InVybCIgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6OTg3Ni90ZXN0LndhdiI+PC9pbnB1dD4gPGxhYmVsIGZvcj0iYmFyay1pbnB1dCI+VGV4dCB0byBzcGVhazwvbGFiZWw+IDx0ZXh0YXJlYSBpZD0iYmFyay1pbnB1dCI+VGVzdCBzZW50ZW5jZS4gQW5kIGEgc2Vjb25kIHRlc3QuPC90ZXh0YXJlYT4gPGJ1dHRvbiBvbmNsaWNrPSJnZXRBdWRpbyh1cmwoKSwgY29kZSgpLCB0ZXh0KCksIGF1ZGlvQ2h1bmtIYW5kbGVyLCBhdWRpb0RvbmVIYW5kbGVyKSI+U3BlYWs8L2J1dHRvbj4gPGRpdiBpZD0iYmFyay1vdXRwdXQiPjwvZGl2PiA8YSBpZD0iZG93bmxvYWQiIGhyZWY9IiI+RG93bmxvYWQgU3BlZWNoPC9hPiA8cHJlPiA8Y29kZSBpZD0iY29kZSIgY29udGVudGVkaXRhYmxlPSJ0cnVlIj4geyUgaW5jbHVkZSAiYmFyay5weSIgJX0gPC9jb2RlPiA8L3ByZT4gPC9ib2R5PiA8L2h0bWw+ICcnJykgZGVmIHJ1bihfKTogZnJvbSBmbGFzayBpbXBvcnQgcmVuZGVyX3RlbXBsYXRlIHJldHVybiByZW5kZXJfdGVtcGxhdGUodGVtcGxhdGVfaHRtbCkiCg==' http://localhost:9876
 #+end_export
 
+And actually running it:
+
 #+BEGIN_SRC bash :exports both :results html
 ./example/bark/bark_construct_curl.sh http://localhost:9876 | xargs -0 -I{} bash -c "{}"
 #+END_SRC
 
 #+RESULTS:
 #+begin_export html
-Error executing Unsafe code: Error executing Unsafe code: No 'run' method defined in codehttp://localhost:9876/?code_b64=Cg%3d%3d
+<!doctype html>
+<html>
+  <head>
+    <title>bark test</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <script src="/bark/bark.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <script>
+      function code() {
+        return $("#code").text();
+      }
+
+      function url() {
+        return $("#url").val();
+      }
+
+      function barkText() {
+        return $('#bark-input').val();
+      }
+
+
+      function audioUrl() {
+        const request = makeRequest(code(), text());
+        return url() + '?' + $.param(request);
+      }
+
+
+      function audioChunkHandler(chunk) {
+        console.log('audio chunk', chunk);
+        setAudioDataURL([chunk]);
+      }
+
+      function audioDoneHandler() {
+        console.log('audio done');
+      }
+
+      const audio = new Audio();
+
+      function setAudioDataURL(values) {
+        console.log('setting audio data url', values);
+        const blob = new Blob(values, { type: 'audio/wav' });
+        console.log('setting audio data url', values, blob);
+        audio.src = URL.createObjectURL(blob);
+        audio.play();
+      }
+
+      $(function() {
+        console.log("setting download");
+        $("#download").attr('href', audioUrl());
+        const audioDiv = document.getElementById('bark-output');
+        audio.controls = true;
+        audioDiv.appendChild(audio);
+        audio.addEventListener('loadeddata', () => {
+          audio.play();
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <label for="url">Exec URL</label>
+    <input type="text" id="url" value="http://localhost:9876/test.wav"></input>
+    <label for="bark-input">Text to speak</label>
+    <textarea id="bark-input">Test sentence. And a second test.</textarea>
+    <button onclick="getAudio(url(), code(), text(), audioChunkHandler, audioDoneHandler)">Speak</button>
+    <div id="bark-output"></div>
+    <a id="download" href="">Download Speech</a>
+    <pre>
+      <code id="code" contenteditable="true">
+def run(request, text: str, speaker: str = "v2/en_speaker_6"):
+    import os
+    import logging
+    import io
+    import nltk
+    from scipy.io.wavfile import write as write_wav
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["SUNO_USE_SMALL_MODELS"] = "0"
+    os.environ["SUNO_OFFLOAD_CPU"] = "0"
+
+    from bark.generation import generate_text_semantic, preload_models
+    from bark import generate_audio, SAMPLE_RATE
+
+    preload_models()
+
+    def generate():
+        sentences = nltk.sent_tokenize(text.replace("
+", " ").strip())
+        for sentence in sentences:
+            logging.info("Generating sentence: %s", sentence)
+            wav_array = generate_audio(sentence, history_prompt=speaker)
+            buf = io.BytesIO()
+            write_wav(buf, SAMPLE_RATE, wav_array)
+            yield buf.read()
+
+    return generate(), {"Content-Type": "audio/mpeg"}
+
+      </code>
+    </pre>
+  </body>
+</html>
+http://localhost:9876/?code_b64=CmRlZiBydW4oXyk6CiAgZnJvbSBmbGFzayBpbXBvcnQgcmVuZGVyX3RlbXBsYXRlCiAgdHJ5OgogICAgICByZW5kZXJfdGVtcGxhdGUoJycnPCFkb2N0eXBlIGh0bWw%2bCjxodG1sPgogIDxoZWFkPgogICAgPHRpdGxlPmJhcmsgdGVzdDwvdGl0bGU%2bCiAgICA8bGluayByZWw9InN0eWxlc2hlZXQiIGhyZWY9Imh0dHBzOi8vY2RuLnNpbXBsZWNzcy5vcmcvc2ltcGxlLm1pbi5jc3MiPgogICAgPHNjcmlwdCBzcmM9Ii9iYXJrL2JhcmsuanMiPjwvc2NyaXB0PgogICAgPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PgogICAgPHNjcmlwdD4KICAgICAgZnVuY3Rpb24gY29kZSgpIHsKICAgICAgICByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHVybCgpIHsKICAgICAgICByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyAgIAogICAgICB9CgogICAgICBmdW5jdGlvbiBiYXJrVGV4dCgpIHsKICAgICAgICByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsKICAgICAgfQoKCiAgICAgIGZ1bmN0aW9uIGF1ZGlvVXJsKCkgewogICAgICAgIGNvbnN0IHJlcXVlc3QgPSBtYWtlUmVxdWVzdChjb2RlKCksIHRleHQoKSk7CiAgICAgICAgcmV0dXJuIHVybCgpICsgJz8nICsgJC5wYXJhbShyZXF1ZXN0KTsKICAgICAgfQoKCiAgICAgIGZ1bmN0aW9uIGF1ZGlvQ2h1bmtIYW5kbGVyKGNodW5rKSB7CiAgICAgICAgY29uc29sZS5sb2coJ2F1ZGlvIGNodW5rJywgY2h1bmspOwogICAgICAgIHNldEF1ZGlvRGF0YVVSTChbY2h1bmtdKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gYXVkaW9Eb25lSGFuZGxlcigpIHsKICAgICAgICBjb25zb2xlLmxvZygnYXVkaW8gZG9uZScpOwogICAgICB9CgogICAgICBjb25zdCBhdWRpbyA9IG5ldyBBdWRpbygpOwoKICAgICAgZnVuY3Rpb24gc2V0QXVkaW9EYXRhVVJMKHZhbHVlcykgewogICAgICAgIGNvbnNvbGUubG9nKCdzZXR0aW5nIGF1ZGlvIGRhdGEgdXJsJywgdmFsdWVzKTsKICAgICAgICBjb25zdCBibG9iID0gbmV3IEJsb2IodmFsdWVzLCB7IHR5cGU6ICdhdWRpby93YXYnIH0pOwogICAgICAgIGNvbnNvbGUubG9nKCdzZXR0aW5nIGF1ZGlvIGRhdGEgdXJsJywgdmFsdWVzLCBibG9iKTsKICAgICAgICBhdWRpby5zcmMgPSBVUkwuY3JlYXRlT2JqZWN0VVJMKGJsb2IpOwogICAgICAgIGF1ZGlvLnBsYXkoKTsKICAgICAgfQoKICAgICAgJChmdW5jdGlvbigpIHsKICAgICAgICBjb25zb2xlLmxvZygic2V0dGluZyBkb3dubG9hZCIpOwogICAgICAgICQoIiNkb3dubG9hZCIpLmF0dHIoJ2hyZWYnLCBhdWRpb1VybCgpKTsKICAgICAgICBjb25zdCBhdWRpb0RpdiA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdiYXJrLW91dHB1dCcpOwogICAgICAgIGF1ZGlvLmNvbnRyb2xzID0gdHJ1ZTsKICAgICAgICBhdWRpb0Rpdi5hcHBlbmRDaGlsZChhdWRpbyk7CiAgICAgICAgYXVkaW8uYWRkRXZlbnRMaXN0ZW5lcignbG9hZGVkZGF0YScsICgpID0%2bIHsKICAgICAgICAgIGF1ZGlvLnBsYXkoKTsKICAgICAgICB9KTsKICAgICAgfSk7CiAgICA8L3NjcmlwdD4KICA8L2hlYWQ%2bCiAgPGJvZHk%2bCiAgICA8bGFiZWwgZm9yPSJ1cmwiPkV4ZWMgVVJMPC9sYWJlbD4KICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idXJsIiB2YWx1ZT0iaHR0cDovL2xvY2FsaG9zdDo5ODc2L3Rlc3Qud2F2Ij48L2lucHV0PgogICAgPGxhYmVsIGZvcj0iYmFyay1pbnB1dCI%2bVGV4dCB0byBzcGVhazwvbGFiZWw%2bCiAgICA8dGV4dGFyZWEgaWQ9ImJhcmstaW5wdXQiPlRlc3Qgc2VudGVuY2UuIEFuZCBhIHNlY29uZCB0ZXN0LjwvdGV4dGFyZWE%2bCiAgICA8YnV0dG9uIG9uY2xpY2s9ImdldEF1ZGlvKHVybCgpLCBjb2RlKCksIHRleHQoKSwgYXVkaW9DaHVua0hhbmRsZXIsIGF1ZGlvRG9uZUhhbmRsZXIpIj5TcGVhazwvYnV0dG9uPgogICAgPGRpdiBpZD0iYmFyay1vdXRwdXQiPjwvZGl2PgogICAgPGEgaWQ9ImRvd25sb2FkIiBocmVmPSIiPkRvd25sb2FkIFNwZWVjaDwvYT4KICAgIDxwcmU%2bCiAgICAgIDxjb2RlIGlkPSJjb2RlIiBjb250ZW50ZWRpdGFibGU9InRydWUiPgpkZWYgcnVuKHJlcXVlc3QsIHRleHQ6IHN0ciwgc3BlYWtlcjogc3RyID0gInYyL2VuX3NwZWFrZXJfNiIpOgogICAgaW1wb3J0IG9zCiAgICBpbXBvcnQgbG9nZ2luZwogICAgaW1wb3J0IGlvCiAgICBpbXBvcnQgbmx0awogICAgZnJvbSBzY2lweS5pby53YXZmaWxlIGltcG9ydCB3cml0ZSBhcyB3cml0ZV93YXYKCiAgICBvcy5lbnZpcm9uWyJDVURBX1ZJU0lCTEVfREVWSUNFUyJdID0gIjAiCiAgICBvcy5lbnZpcm9uWyJTVU5PX1VTRV9TTUFMTF9NT0RFTFMiXSA9ICIwIgogICAgb3MuZW52aXJvblsiU1VOT19PRkZMT0FEX0NQVSJdID0gIjAiCgogICAgZnJvbSBiYXJrLmdlbmVyYXRpb24gaW1wb3J0IGdlbmVyYXRlX3RleHRfc2VtYW50aWMsIHByZWxvYWRfbW9kZWxzCiAgICBmcm9tIGJhcmsgaW1wb3J0IGdlbmVyYXRlX2F1ZGlvLCBTQU1QTEVfUkFURQoKICAgIHByZWxvYWRfbW9kZWxzKCkKCiAgICBkZWYgZ2VuZXJhdGUoKToKICAgICAgICBzZW50ZW5jZXMgPSBubHRrLnNlbnRfdG9rZW5pemUodGV4dC5yZXBsYWNlKCJcbiIsICIgIikuc3RyaXAoKSkKICAgICAgICBmb3Igc2VudGVuY2UgaW4gc2VudGVuY2VzOgogICAgICAgICAgICBsb2dnaW5nLmluZm8oIkdlbmVyYXRpbmcgc2VudGVuY2U6ICVzIiwgc2VudGVuY2UpCiAgICAgICAgICAgIHdhdl9hcnJheSA9IGdlbmVyYXRlX2F1ZGlvKHNlbnRlbmNlLCBoaXN0b3J5X3Byb21wdD1zcGVha2VyKQogICAgICAgICAgICBidWYgPSBpby5CeXRlc0lPKCkKICAgICAgICAgICAgd3JpdGVfd2F2KGJ1ZiwgU0FNUExFX1JBVEUsIHdhdl9hcnJheSkKICAgICAgICAgICAgeWllbGQgYnVmLnJlYWQoKQoKICAgIHJldHVybiBnZW5lcmF0ZSgpLCB7IkNvbnRlbnQtVHlwZSI6ICJhdWRpby9tcGVnIn0KCiAgICAgIDwvY29kZT4KICAgIDwvcHJlPgogIDwvYm9keT4KPC9odG1sPgonJycpCiAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICByZXR1cm4gc3RyKGUpCg%3d%3d
 #+end_export
