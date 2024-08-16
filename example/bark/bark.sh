@@ -18,10 +18,11 @@ JSON=$(jo \
 CMD="curl --json $JSON $URL"
 
 echo "Running $CMD"
-for event in $($CMD); do
+for event in "$($CMD)"; do
   if [[ "$event" == "data: {"* ]]; then
     echo "Got event"
-    WAV=$(echo "$event" | sed 's/data: //g' | jq '.cumulative' | base64 -d)
+    WAV=$(echo "$event" | sed 's/data: //g' | jq '.cumulative')
+    echo "$WAV"
     echo "$WAV" > $OUTFILE
   fi
 done
