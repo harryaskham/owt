@@ -1,33 +1,17 @@
-from typing import Callable, Any, reveal_type
-import hashlib
-import urllib
-import asyncio
-from collections import defaultdict
+import argparse
 import base64
+import dataclasses
+import hashlib
+import json
 import logging
 import os
-import json
 from dataclasses import dataclass
-import dataclasses
-from multiprocessing.connection import Client
-from flask import (
-    Flask,
-    request,
-    Response,
-    jsonify,
-    send_file,
-    send_from_directory,
-    render_template,
-    url_for,
-    current_app,
-)
+from logging.config import dictConfig
+from typing import Any, Callable, Optional
+
+from flask import Flask, Response, request
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
-import requests
-from multiprocessing import Process
-import bark
-import argparse
-from logging.config import dictConfig
 
 dictConfig(
     {
@@ -59,14 +43,10 @@ parser.add_argument(
 parser.add_argument(
     "--port", default=os.environ.get("OWT_PORT", 9876), help="Port to serve from"
 )
-parser.add_argument("--auth-enabled", action=argparse.BooleanOptionalAction)
 parser.add_argument(
     "--auth",
-    default=os.environ.get(
-        "OWT_BASIC_AUTH",
-        "owt:cbdde0ca6618426b57782672d5d1f74525379f6d06812db55d4e1e918e88d54",
-    ),
-    help="Basic auth username:password_sha256 (default: owt:sha256(owt))",
+    default=os.environ.get("OWT_AUTH", None),
+    help="Basic auth username:password_sha256. --auth for owt:owt"
 )
 
 try:
@@ -77,7 +57,7 @@ except argparse.ArgumentError as e:
 
 
 app = Flask(
-    __name__, static_url_path="", static_folder="static", template_folder="example"
+    __name__# , static_url_path="", static_folder="static", template_folder="example"
 )
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 auth = HTTPBasicAuth()
@@ -94,11 +74,23 @@ class PlaintextPassword:
 
 @dataclass(frozen=True, kw_only=True)
 class BasicAuth:
-    enabled: bool
     usernameToSHA256: dict[str, str] = dataclasses.field(default_factory=dict)
+
+    @classmethod
+    def maybe_single_user(cls, auth_str: str | None) -> Optional['BasicAuth']:
+        if not auth_str:
+            return None
+        auth = cls()
+        auth.add(*auth_str.split(":"))
+        return auth
 
     def add(self, username: str, password_sha256: str):
         self.usernameToSHA256[username] = password_sha256
+        return self
+
+    def with_default_user(self) -> 'BasicAuth':
+        self.add("owt", PlaintextPassword("owt").sha256())
+        return self
 
     def authenticate(self, username: str, password: PlaintextPassword) -> bool:
         if username not in self.usernameToSHA256:
@@ -113,7 +105,7 @@ class Server:
     address: str
     port: int
     cache: dict["CacheKey", Any] = dataclasses.field(default_factory=dict)
-    auth: BasicAuth
+    auth: BasicAuth | None = None
 
     @classmethod
     def serve(cls, **kwargs):
@@ -130,15 +122,14 @@ class Server:
         return _SERVER
 
 
-_SERVER: Server = None
+_SERVER: Server | None = None
 
 
 @auth.verify_password
 def verify(username, password):
     server = Server.sing()
-    if not server.auth.enabled:
+    if not server.auth:
         return True
-
     return server.auth.authenticate(username, PlaintextPassword(password))
 
 
@@ -315,9 +306,7 @@ def _run_unsafe_exec(path: str | None, request) -> Response:
 
 
 def main():
-    auth = BasicAuth(enabled=args.auth_enabled)
-    auth.add(*args.auth.split(":"))
-    Server.serve(address=args.address, port=args.port, auth=auth)
+    Server.serve(address=args.address, port=args.port, auth=BasicAuth.maybe_single_user(args.auth))
 
 
 if __name__ == "__main__":

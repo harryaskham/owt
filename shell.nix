@@ -3,7 +3,6 @@
 let
   pythonPkgs = python-packages: with python-packages; [
     virtualenv
-    flake8
   ];
   pythonEnv = pkgs.python3.withPackages pythonPkgs;
   lib-path = with pkgs; lib.makeLibraryPath [
@@ -15,9 +14,6 @@ in
   pkgs.mkShell {
     buildInputs = with pkgs; [
       pythonEnv
-      black
-      isort
-      mypy
       jo
       jq
     ];
@@ -29,6 +25,7 @@ in
       fi
       source ./$VENV/bin/activate
       pip install -r requirements.txt
+      yes | mypy --install-types
       python -c "import nltk; nltk.download('punkt')"
       tmux
     '';
