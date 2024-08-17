@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass
 from logging.config import dictConfig
 from typing import Any, Callable, Optional, TypedDict, Unpack
-import summat
+from owt import summat
 
 from flask import Flask, Response, request, Request
 from flask_cors import CORS
