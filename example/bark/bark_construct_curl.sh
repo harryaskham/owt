@@ -4,7 +4,7 @@ URL="$1"
 CODE=$(python <<EOF
 with open('example/bark/bark.html', 'r') as html_f:
   html = html_f.read()
-  with open('example/bark/bark.py', 'r') as code_f:
+  with open('owt/lib/bark.py', 'r') as code_f:
     code = code_f.read()
     with open('example/bark/bark.js', 'r') as js_f:
       template = (html.replace('{% include "bark.py" %}', code)

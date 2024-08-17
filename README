@@ -146,7 +146,7 @@ To avoid this breaking other ~owt~ uses, one can spin up multiple instances of ~
 
 ***** Python Adaptor
 The endpoint logic, to be base64-encoded as part of the request.
-#+INCLUDE: "example/bark/bark.py" src python
+#+INCLUDE: "owt/lib/bark.py" src python
 
 ***** Save audio via cURL
 Bundle the endpoint logic with a prompt and download the resulting audio.

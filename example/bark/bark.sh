@@ -7,7 +7,7 @@ URL="$1"
 TEXT="$2"
 OUTDIR="$3"
 
-CODE_B64="$(cat example/bark/bark.py | base64 -w 0)"
+CODE_B64="$(cat owt/lib/bark.py | base64 -w 0)"
 KWARGS_B64=$(echo "{\"text\": \"$TEXT\"}" | base64 -w 0)
 JSON=$(jo \
   code_b64=$CODE_B64 \
