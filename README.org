@@ -43,7 +43,7 @@ B'# EXAMPLE/SUMMAT/SIMPLE.SH\N\NURL="$1"\NREAD -R -D \'\' CODE << EOF\NFROM OWT 
 #+end_src
 
 Most of the examples below show ~owt~ "in the raw", without using the pipelining syntax sugar.
-
+**
 ** What's This?
 
 A server an endpoint whose request handling behaviour is configured by the request itself.
