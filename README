@@ -4,6 +4,7 @@ Serve up owt yer fancy on t'fly.
 
 ** tl;dr
 
+
 Send the logic for a virtual endpoint along with a request:
 
 #+INCLUDE: "example/summat/simple.sh" src bash
@@ -26,7 +27,7 @@ A server an endpoint whose request handling behaviour is configured by the reque
 For example, start by launching ~owt~:
 
 #+BEGIN_SRC
-$ owt
+$ python -m owt.server
 
 > Owt serving on 0.0.0.0:9876
 #+END_SRC
