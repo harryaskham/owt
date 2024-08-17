@@ -199,7 +199,7 @@ bash -c "$(./example/bark/bark_meta_curl.sh http://localhost:9876) -s -o /dev/nu
 
 **** Going Meta-Circular
 
-So what would stop you hosting the entirey of ~owt.py~ on... wait, no...
+So what would stop you hosting the entirey of ~owt~ on... wait, no...
 
 #+INCLUDE: "example/meta/bootstrap.sh" src bash
 
@@ -228,6 +228,8 @@ bash -c "$CMD"
 Oh no... but that would mean you could... I wonder...
 
 #+INCLUDE: "example/meta/bootstrap.py" src python
+
+Someone please call Douglas Hofstadter
 
 #+BEGIN_SRC bash :exports both :results output replace
 METACODE_B64=$(cat example/meta/bootstrap.py | base64 -w 0)

@@ -1,4 +1,4 @@
-# Created 2024-08-17 Sat 18:32
+# Created 2024-08-17 Sat 18:36
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -414,7 +414,7 @@ bash -c "$(./example/bark/bark_meta_curl.sh http://localhost:9876) -s -o /dev/nu
 : http://localhost:9876/?code_b64=ZGVmIHJ1bihiYXNlX3VybCk6CiAgaW1wb3J0IG9zCiAgaHRtbCA9IG9zLnBvcGVuKGYnYmFzaCAtYyAiJCguL2V4YW1wbGUvYmFyay9iYXJrX2NvbnN0cnVjdF9jdXJsLnNoIHtiYXNlX3VybH0pIicpLnJlYWQoKQogIHJldHVybiBodG1sCg%3d%3d&kwargs_b64=eyJiYXNlX3VybCI6ICJodHRwOi8vbG9jYWxob3N0Ojk4NzYifQo%3d
 **** Going Meta-Circular
 
-So what would stop you hosting the entirey of ~owt.py~ on... wait, no...
+So what would stop you hosting the entirey of ~owt~ on... wait, no...
 
 #+begin_src bash
 # example/meta/bootstrap.sh
@@ -504,6 +504,8 @@ def run(**kwargs):
         f'source ./example/meta/bootstrap.sh; $(owtInOwt http://localhost {args.port} "{payload_code_b64}" "{payload_kwargs_b64}")'
     ).read()
 #+end_src
+
+Someone please call Douglas Hofstadter
 
 #+begin_src bash :exports both :results output replace
 METACODE_B64=$(cat example/meta/bootstrap.py | base64 -w 0)
