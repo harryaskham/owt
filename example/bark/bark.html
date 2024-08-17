@@ -6,21 +6,6 @@
     <script src="/bark/bark.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
     <script>
-      function code() {
-        return $("#code").text();
-      }
-
-      function url() {
-        return $("#url").val();   
-      }
-
-      function speaker() {
-        return $("#speaker").val();   
-      }
-
-      function barkText() {
-        return $('#bark-input').val();
-      }
 
       function audioChunkHandler(chunk) {
         console.log('audio chunk', chunk);
@@ -33,7 +18,15 @@
       }
 
       function handleSpeak() {
-        return getAudio(url(), code(), barkText(), speaker(), audioChunkHandler);
+        return getAudio(
+            $("#url").val(),
+            $("#code").text(),
+            $('#bark-input').val(),
+            $("#speaker").val(),
+            $("#sentence-template").val(),
+            $("#split-type").val(),
+            audioChunkHandler
+        );
       }
 
       const audio = new Audio();
@@ -66,11 +59,18 @@
     <label for="url">Exec URL</label>
     <input type="text" id="url" value="http://localhost:9876"></input>
     <label for="bark-input">Text to speak</label>
-    <textarea id="bark-input">[singing] I got a little - coffee - for - YOU! [laughter] Oh, I go crazy for big ol' coffee beans... [ominous music] Who knows what we are doing here? [birds chirping] That's a sparrow!</textarea>
-    <label for="speaker">Speaker</label>
-    <a href="https://suno-ai.notion.site/8b8e8749ed514b0cbf3f699013548683?v=bc67cff786b04b50b3ceb756fd05f68c">Speaker list</a>
-    <input type="text" id="speaker" value="v2/en_speaker_9"></input>
+    <textarea id="bark-input">It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions, though not quickly enough to prevent a swirl of gritty dust from entering along with him. The hallway smelt of boiled cabbage and old rag mats. At one end of it a coloured poster, too large for indoor display, had been tacked to the wall. It depicted simply an enormous face, more than a metre wide: the face of a man of about forty-five, with a heavy black moustache and ruggedly handsome features. Winston made for the stairs. It was no use trying the lift. Even at the best of times it was seldom working, and at present the electric current was cut off during daylight hours. It was part of the economy drive in preparation for HateWeek. The flat was seven flights up, and Winston, who was thirty-nine and had a varicose ulcer above his right ankle, went slowly, resting several times on the way. On each landing, opposite the lift shaft, the poster with the enormous face gazed from the wall. It was one of those pictures which are so contrived that the eyes follow you about when you move. BIG BROTHER IS WATCHING YOU, the caption beneath it ran.</textarea>
+    <label for="split-type">Split On:</label>
+    <select id="split-type">
+      <option value="sentence">Sentence</option>
+      <option value="none">None</option>
     </select>
+    <label for="speaker">
+    <a href="https://suno-ai.notion.site/8b8e8749ed514b0cbf3f699013548683?v=bc67cff786b04b50b3ceb756fd05f68c">Speaker</a>
+    </label>
+    <input type="text" id="speaker" value="v2/fr_speaker_1"></input>
+    <label for="sentence-template">Sentence Template</label>
+    <input type="text" id="sentence-template" value="%s"></input>
     <button onclick="handleSpeak()">Speak</button>
     <div id="bark-output"></div>
     <pre>

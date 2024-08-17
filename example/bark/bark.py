@@ -1,7 +1,12 @@
 # example/bark/bark.py
+from typing import Literal
 
+def run(request,
+        text: str,
+        speaker: str = "v2/en_speaker_6",
+        sentence_template: str = "%s",
+        split_type: Literal["sentence", "none"] = "sentence"):
 
-def run(request, text: str, speaker: str = "v2/en_speaker_6"):
     import os
     import logging
     import json
@@ -12,12 +17,11 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
     from scipy.io.wavfile import write as write_wav
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-    os.environ["SUNO_USE_SMALL_MODELS"] = "1"
+    os.environ["SUNO_USE_SMALL_MODELS"] = "0"
     os.environ["SUNO_OFFLOAD_CPU"] = "0"
 
-    from bark.generation import generate_text_semantic, preload_models
+    from bark.generation import generate_text_semantic, preload_models, SAMPLE_RATE
     from bark.api import semantic_to_waveform
-    from bark import SAMPLE_RATE
 
     preload_models()
 
@@ -28,9 +32,15 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
         return base64.b64encode(wav).decode("utf-8")
 
     def generate():
-        sentences = nltk.sent_tokenize(text.replace("\n", " ").strip())
+        clean_text = text.replace("\n", " ").strip()
+        match split_type:
+            case "sentence":
+                sentences = nltk.sent_tokenize(clean_text)
+            case "none":
+                sentences = [clean_text]
         full_wav_array = None
-        for i, sentence in enumerate(sentences):
+        for i, raw_sentence in enumerate(sentences):
+            sentence = sentence_template % raw_sentence
             logging.info(
                 "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
             )
@@ -41,7 +51,6 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
                 min_eos_p=0.05,
             )
             wav_array = semantic_to_waveform(semantic_tokens, history_prompt=speaker)
-            # wav_array = generate_audio(sentence, history_prompt=speaker)
             full_wav_array = (
                 wav_array
                 if full_wav_array is None

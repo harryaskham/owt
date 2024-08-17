@@ -7,9 +7,10 @@ import logging
 import os
 from dataclasses import dataclass
 from logging.config import dictConfig
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TypedDict, Unpack
+import summat
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, Request
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 
@@ -46,7 +47,7 @@ parser.add_argument(
 parser.add_argument(
     "--auth",
     default=os.environ.get("OWT_AUTH", None),
-    help="Basic auth username:password_sha256. --auth for owt:owt"
+    help="Basic auth username:password_sha256. --auth for owt:owt",
 )
 
 try:
@@ -57,7 +58,7 @@ except argparse.ArgumentError as e:
 
 
 app = Flask(
-    __name__# , static_url_path="", static_folder="static", template_folder="example"
+    __name__  # , static_url_path="", static_folder="static", template_folder="example"
 )
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 auth = HTTPBasicAuth()
@@ -77,7 +78,7 @@ class BasicAuth:
     usernameToSHA256: dict[str, str] = dataclasses.field(default_factory=dict)
 
     @classmethod
-    def maybe_single_user(cls, auth_str: str | None) -> Optional['BasicAuth']:
+    def maybe_single_user(cls, auth_str: str | None) -> Optional["BasicAuth"]:
         if not auth_str:
             return None
         auth = cls()
@@ -88,7 +89,7 @@ class BasicAuth:
         self.usernameToSHA256[username] = password_sha256
         return self
 
-    def with_default_user(self) -> 'BasicAuth':
+    def with_default_user(self) -> "BasicAuth":
         self.add("owt", PlaintextPassword("owt").sha256())
         return self
 
@@ -150,7 +151,7 @@ class CacheKey:
 
 @dataclass(frozen=True, kw_only=True)
 class Unsafe:
-    # Code to run, defining a Callable[[...], Response] with a function of the expected name.
+    # Code to run, defining a Callable[[Request, ...], Response] with a function of the expected name.
     code_b64: str
 
     # The function to run in the given code.
@@ -158,7 +159,7 @@ class Unsafe:
     fn_name: str = "run"
 
     # Kwargs to pass to the run function
-    kwargs_b64: str = None
+    kwargs_b64: str | None = None
 
     # If true, results will be cached according to the name of the endpoint provided
     use_cache: bool = False
@@ -201,7 +202,7 @@ class Unsafe:
             raise ValueError(f"Failed to parse Unsafe from JSON: {e}")
 
     @classmethod
-    def from_request(cls, request) -> "Unsafe":
+    def from_request(cls, request: Request) -> "Unsafe":
         try:
             unsafe = cls.from_json(request.data)
             logging.info(
@@ -238,7 +239,7 @@ class Unsafe:
     def code_indented(self, indent: int) -> str:
         return "\n".join(self.lines(indent=indent))
 
-    def unsafe_exec_fn(self) -> Callable[[], Response]:
+    def unsafe_exec_fn(self) -> Callable[[summat.Adaptor], Response]:
         _globals = globals()
         _locals = locals()
         logging.info("Running code:\n\n%s", self.code_indented(4))
@@ -256,7 +257,9 @@ class Unsafe:
     def unsafe_exec(self, request) -> Any:
         try:
             logging.info("Running with kwargs: %s", self.kwargs)
-            return self.unsafe_exec_fn()(request, **self.kwargs)
+            kwargs = (self.kwargs)
+            kwargs["__request__"] = request
+            return self.unsafe_exec_fn()(**kwargs)
         except Exception as e:
             raise RuntimeError(f"Error executing Unsafe code: {e}")
 
@@ -264,11 +267,12 @@ class Unsafe:
 @app.route("/<path:path>", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
 @auth.login_required
-def unsafe_exec(path: str | None = None) -> Response:
+def unsafe_exec(path: str | None = None) -> Any:
     return _run_unsafe_exec(path, request)
 
 
-def _run_unsafe_exec(path: str | None, request) -> Response:
+def _run_unsafe_exec(maybe_path: str | None, request: Request) -> Any:
+    path = maybe_path or "/"
     try:
         unsafe = Unsafe.from_request(request)
     except Exception as e:
@@ -280,33 +284,38 @@ def _run_unsafe_exec(path: str | None, request) -> Response:
             case (cache_key_override, _):
                 cache_key = cache_key_override
             case (None, False):
-                cache_key = CacheKey(path)
+                cache_key = CacheKey(path=path)
             case (None, True):
-                cache_key = CacheKey(path, unsafe.kwargs_b64)
+                cache_key = CacheKey(path=path, kwargs_b64=unsafe.kwargs_b64)
         logging.info(
             "Using cache for endpoint %s with key: %s",
             path,
             cache_key,
         )
 
-        if cache_key in _SERVER.cache:
+        if cache_key in Server.sing().cache:
             logging.info("Cache hit; returning for %s", cache_key)
-            return _SERVER.cache[cache_key]
+            return Server.sing().cache[cache_key]
         else:
             logging.info("Cache miss: %s", cache_key)
 
     try:
         result = unsafe.unsafe_exec(request)
         if cache_key:
-            _SERVER.cache[cache_key] = result
+            Server.sing().cache[cache_key] = result
             logging.info("Cached result for %s", cache_key)
         return result
     except Exception as e:
         return f"Error executing Unsafe code: {e}", 500
 
 
+
 def main():
-    Server.serve(address=args.address, port=args.port, auth=BasicAuth.maybe_single_user(args.auth))
+    Server.serve(
+        address=args.address,
+        port=args.port,
+        auth=BasicAuth.maybe_single_user(args.auth),
+    )
 
 
 if __name__ == "__main__":
