@@ -2,7 +2,7 @@ function makeRequest(code, text, speaker) {
   return {
     'code_b64': btoa(code),
     'kwargs_b64': btoa(JSON.stringify({
-      'text': text,
+      'text': text.replace(/\n/g, '\\n'),
       'speaker': speaker
     })),
   };
