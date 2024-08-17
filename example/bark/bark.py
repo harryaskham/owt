@@ -17,7 +17,7 @@ def run(request, text: str, speaker: str = "v2/en_speaker_6"):
 
     from bark.generation import generate_text_semantic, preload_models
     from bark.api import semantic_to_waveform
-    from bark import generate_audio, SAMPLE_RATE
+    from bark import SAMPLE_RATE
 
     preload_models()
 
