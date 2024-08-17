@@ -11,7 +11,7 @@ with open('example/bark/bark.html', 'r') as html_f:
                   .replace('<script src="/bark/bark.js"></script>',
                            '<script>\n'+js_f.read()+'\n</script>'))
       print('''
-def run(_):
+def run():
   return (r\'\'\'
 '''+template+'''
 \'\'\')''')

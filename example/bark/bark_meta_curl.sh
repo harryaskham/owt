@@ -2,7 +2,7 @@
 
 URL="$1"
 read -r -d '' CODE << 'EOF'
-def run(_, base_url):
+def run(base_url):
   import os
   html = os.popen(f'bash -c "$(./example/bark/bark_construct_curl.sh {base_url})"').read()
   return html
