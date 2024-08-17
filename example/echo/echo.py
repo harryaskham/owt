@@ -1,6 +1,6 @@
 # example/echo/echo.py
 
-from owt import Server
+from owt.server import Server
 
 
 def run(name=None):

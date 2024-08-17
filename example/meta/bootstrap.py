@@ -1,6 +1,4 @@
 # example/bootstrap/bootstrap.py
-from owt import args
-
 
 def run(**kwargs):
     import os

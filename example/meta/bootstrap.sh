@@ -16,7 +16,7 @@ def run(**kwargs):
 
   exec('''
 print('One level deeper, importing owt')
-from owt import *
+from owt.server import *
 from multiprocessing import Process
 args.port = new_port
 server_thread = Process(target=main)
