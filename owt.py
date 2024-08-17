@@ -254,12 +254,10 @@ class Unsafe:
             raise ValueError(f"No '{self.fn_name}' method defined in code")
         return run_fn
 
-    def unsafe_exec(self, request) -> Any:
+    def unsafe_exec(self) -> Any:
         try:
             logging.info("Running with kwargs: %s", self.kwargs)
-            kwargs = (self.kwargs)
-            kwargs["__request__"] = request
-            return self.unsafe_exec_fn()(**kwargs)
+            return self.unsafe_exec_fn()(**self.kwargs)
         except Exception as e:
             raise RuntimeError(f"Error executing Unsafe code: {e}")
 
@@ -300,7 +298,7 @@ def _run_unsafe_exec(maybe_path: str | None, request: Request) -> Any:
             logging.info("Cache miss: %s", cache_key)
 
     try:
-        result = unsafe.unsafe_exec(request)
+        result = unsafe.unsafe_exec()
         if cache_key:
             Server.sing().cache[cache_key] = result
             logging.info("Cached result for %s", cache_key)

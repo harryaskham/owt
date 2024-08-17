@@ -1,9 +1,49 @@
-# Created 2024-08-16 Fri 23:09
+# Created 2024-08-17 Sat 16:57
 #+title: 
 #+author: Harry Askham
 * Owt
 
 Serve up owt yer fancy on t'fly.
+** tl;dr
+
+Send the logic for a virtual endpoint along with a request:
+
+#+begin_src bash
+# example/summat/simple.sh
+
+URL="$1"
+read -r -d '' CODE << EOF
+from owt import summat as s
+
+run = (
+    s.pipe()
+    .to(s.LoadFile(root_dir='./example/summat'))
+    .to(s.NameOutput(name='buf'))
+    .to(s.BufferSink())
+    .f(lambda ab: (str(ab[0]).upper(), ab[1]))
+    .done()
+)
+EOF
+
+curl --json $(jo \
+  code_b64=$(echo "$CODE" | base64 -w 0) \
+  kwargs_b64=$(echo "{'path': 'simple.sh'}" | base64 -w 0) \
+) $URL
+#+end_src
+
+Allowing quick access to arbitrary Python libraries from anywhere you can make an HTTP request:
+
+#+begin_src bash :exports both :results code replace
+./example/summat/simple.sh http://localhost:9876
+#+end_src
+
+#+results: 
+#+begin_src bash
+B'# EXAMPLE/SUMMAT/SIMPLE.SH\N\NURL="$1"\NREAD -R -D \'\' CODE << EOF\NFROM OWT IMPORT SUMMAT AS S\N\NRUN = (\N    S.PIPE()\N    .TO(S.LOADFILE(ROOT_DIR=\'./EXAMPLE/SUMMAT\'))\N    .TO(S.NAMEOUTPUT(NAME=\'BUF\'))\N    .TO(S.BUFFERSINK())\N    .F(LAMBDA AB: (STR(AB[0]).UPPER(), AB[1]))\N    .DONE()\N)\NEOF\N\NCURL --JSON $(JO \\\N  CODE_B64=$(ECHO "$CODE" | BASE64 -W 0) \\\N  KWARGS_B64=$(ECHO "{\'PATH\': \'SIMPLE.SH\'}" | BASE64 -W 0) \\\N) $URL\N'
+#+end_src
+
+Most of the examples below show ~owt~ "in the raw", without using the pipelining syntax sugar.
+
 ** What's This?
 
 A server an endpoint whose request handling behaviour is configured by the request itself.
@@ -82,7 +122,7 @@ Code and (optionally) arguments are supplied as ~code_b64~ and ~kwargs_b64~. ~kw
 
 URL="$1"
 read -r -d '' CODE << EOF
-def run(_, name: str):
+def run(name: str):
   return f'Hello, {name}!'
 EOF
 curl --json $(jo \
@@ -101,8 +141,10 @@ curl --json $(jo \
 #+begin_src python
 # example/echo/echo.py
 
+from owt import Server
 
-def run(request, name=None):
+
+def run(name=None):
     return f"Hello, {name}, from {Server.sing().address}:{Server.sing().port}!"
 #+end_src
 
@@ -156,44 +198,75 @@ To avoid this breaking other ~owt~ uses, one can spin up multiple instances of ~
 The endpoint logic, to be base64-encoded as part of the request.
 #+begin_src python
 # example/bark/bark.py
+from typing import Literal
 
+def run(request,
+        text: str,
+        speaker: str = "v2/en_speaker_6",
+        sentence_template: str = "%s",
+        split_type: Literal["sentence", "none"] = "sentence"):
 
-def run(request, text: str, speaker: str = "v2/en_speaker_6"):
     import os
     import logging
+    import json
     import io
     import nltk
     import numpy as np
+    import base64
     from scipy.io.wavfile import write as write_wav
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     os.environ["SUNO_USE_SMALL_MODELS"] = "0"
     os.environ["SUNO_OFFLOAD_CPU"] = "0"
 
-    from bark.generation import generate_text_semantic, preload_models
-    from bark import generate_audio, SAMPLE_RATE
+    from bark.generation import generate_text_semantic, preload_models, SAMPLE_RATE
+    from bark.api import semantic_to_waveform
 
     preload_models()
 
+    def base64_wav(arr):
+        buf = io.BytesIO()
+        write_wav(buf, SAMPLE_RATE, arr)
+        wav = buf.getvalue()
+        return base64.b64encode(wav).decode("utf-8")
+
     def generate():
-        sentences = nltk.sent_tokenize(text.replace("\n", " ").strip())
+        clean_text = text.replace("\n", " ").strip()
+        match split_type:
+            case "sentence":
+                sentences = nltk.sent_tokenize(clean_text)
+            case "none":
+                sentences = [clean_text]
         full_wav_array = None
-        for i, sentence in enumerate(sentences):
+        for i, raw_sentence in enumerate(sentences):
+            sentence = sentence_template % raw_sentence
             logging.info(
                 "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
             )
-            wav_array = generate_audio(sentence, history_prompt=speaker)
+            semantic_tokens = generate_text_semantic(
+                sentence,
+                history_prompt=speaker,
+                temp=0.6,
+                min_eos_p=0.05,
+            )
+            wav_array = semantic_to_waveform(semantic_tokens, history_prompt=speaker)
             full_wav_array = (
                 wav_array
                 if full_wav_array is None
                 else np.concatenate((full_wav_array, wav_array))
             )
-            if i == len(sentences) - 1:
-                buf = io.BytesIO()
-                write_wav(buf, SAMPLE_RATE, full_wav_array)
-                yield buf.read()
 
-    return generate(), {"Content-Type": "audio/mpeg"}
+            yield "data: %s\n\n" % (
+                json.dumps(
+                    {
+                        "sentence": base64_wav(wav_array),
+                        "cumulative": base64_wav(full_wav_array),
+                    }
+                )
+            )
+        yield "data: DONE\n\n"
+
+    return generate(), {"Content-Type": "text/event-stream"}
 #+end_src
 ***** Save audio via cURL
 Bundle the endpoint logic with a prompt and download the resulting audio.
@@ -201,11 +274,11 @@ Bundle the endpoint logic with a prompt and download the resulting audio.
 # example/bark/bark.sh
 #
 # Usage:
-# ./example/bark/bark.sh http://localhost:9876/file.wav "Hello world! This is a test." /tmp/output_file.wav
+# ./example/bark/bark.sh http://localhost:9876/file.wav "Hello world! This is a test." /tmp/output_dir
 
 URL="$1"
 TEXT="$2"
-OUTFILE="$3"
+OUTDIR="$3"
 
 CODE_B64="$(cat example/bark/bark.py | base64 -w 0)"
 KWARGS_B64=$(echo "{\"text\": \"$TEXT\"}" | base64 -w 0)
@@ -215,40 +288,52 @@ JSON=$(jo \
   use_cache="true" \
   cache_kwargs="true" \
 )
-CMD="curl --json $JSON $URL -o $OUTFILE"
+CMD="curl --json $JSON $URL"
 
 echo "Running $CMD"
-$CMD
-echo "Wrote $OUTFILE"
+I=0
+for event in "$($CMD)"; do
+  if [[ "$event" == "data: {"* ]]; then
+    WAV="$(echo -n "$event" | sed 's/data: //g' | jq '.sentence' | base64 -d)"
+    echo "$WAV" > "$OUTDIR/sentence$I.wav"
+    I=$((I+1))
+  fi
+done
 #+end_src
 ***** Stream audio via JS
 Use an endpoint from a webapp - see ~example/bark/bark.html~ for usage.
 #+begin_src javascript
-function makeRequest(code, text) {
+function makeRequest(code, text, speaker, sentenceTemplate, splitType) {
   return {
     'code_b64': btoa(code),
-    'kwargs_b64': btoa('{"text": "' + text + '"}')
+    'kwargs_b64': btoa(JSON.stringify({
+      'text': text.replace(/\n/g, '\\n'),
+      'speaker': speaker,
+      'sentence_template': sentenceTemplate,
+      'split_type': splitType
+    })),
   };
 }
 
-async function getAudio(url, code, text, onChunk, onDone) {
-  const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(makeRequest(code, text))
-  });
-  const reader = response.body.getReader();
-  let result = await reader.read();
-  while (!result.done) {
-    const chunk = result.value;
-    console.log("result is", result)
-    console.log("chunk is", chunk)
-    onChunk(chunk)
-    result = await reader.read()
+function audioUrl(
+  url, code, text, speaker, sentenceTemplate, splitType) {
+  const request = makeRequest(
+    code, text, speaker, sentenceTemplate, splitType);
+  return url + '?' + $.param(request);
+}
+
+async function getAudio(
+  url, code, text, speaker, sentenceTemplate, splitType, onChunk) {
+  const source = new EventSource(
+    audioUrl(url, code, text, speaker, sentenceTemplate, splitType));
+  source.onmessage = function(event) {
+    if (event.data.toLowerCase() == 'done') {
+      source.close();
+      return;
+    }
+    const chunk = JSON.parse(event.data);
+    onChunk(chunk);
   }
-  onDone();
 }
 #+end_src
 ***** Ad-hoc Web Server
@@ -287,7 +372,7 @@ bash -c "$(./example/bark/bark_construct_curl.sh http://localhost:9876) -s -o /d
 #+end_src
 
 #+results: 
-: http://localhost:9876/?code_b64=CmRlZiBydW4oXyk6CiAgcmV0dXJuIChyJycnCjwhZG9jdHlwZSBodG1sPgo8aHRtbD4KICA8aGVhZD4KICAgIDx0aXRsZT5iYXJrIHRlc3Q8L3RpdGxlPgogICAgPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSJodHRwczovL2Nkbi5zaW1wbGVjc3Mub3JnL3NpbXBsZS5taW4uY3NzIj4KICAgIDxzY3JpcHQ%2bCmZ1bmN0aW9uIG1ha2VSZXF1ZXN0KGNvZGUsIHRleHQpIHsKICByZXR1cm4gewogICAgJ2NvZGVfYjY0JzogYnRvYShjb2RlKSwKICAgICdrd2FyZ3NfYjY0JzogYnRvYSgneyJ0ZXh0IjogIicgKyB0ZXh0ICsgJyJ9JykKICB9Owp9Cgphc3luYyBmdW5jdGlvbiBnZXRBdWRpbyh1cmwsIGNvZGUsIHRleHQsIG9uQ2h1bmssIG9uRG9uZSkgewogIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2godXJsLCB7CiAgICAgIG1ldGhvZDogJ1BPU1QnLAogICAgICBoZWFkZXJzOiB7CiAgICAgICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL2pzb24nLAogICAgICB9LAogICAgICBib2R5OiBKU09OLnN0cmluZ2lmeShtYWtlUmVxdWVzdChjb2RlLCB0ZXh0KSkKICB9KTsKICBjb25zdCByZWFkZXIgPSByZXNwb25zZS5ib2R5LmdldFJlYWRlcigpOwogIGxldCByZXN1bHQgPSBhd2FpdCByZWFkZXIucmVhZCgpOwogIHdoaWxlICghcmVzdWx0LmRvbmUpIHsKICAgIGNvbnN0IGNodW5rID0gcmVzdWx0LnZhbHVlOwogICAgY29uc29sZS5sb2coInJlc3VsdCBpcyIsIHJlc3VsdCkKICAgIGNvbnNvbGUubG9nKCJjaHVuayBpcyIsIGNodW5rKQogICAgb25DaHVuayhjaHVuaykKICAgIHJlc3VsdCA9IGF3YWl0IHJlYWRlci5yZWFkKCkKICB9CiAgb25Eb25lKCk7Cn0KCjwvc2NyaXB0PgogICAgPHNjcmlwdCBzcmM9Imh0dHBzOi8vY29kZS5qcXVlcnkuY29tL2pxdWVyeS0zLjcuMS5qcyIgaW50ZWdyaXR5PSJzaGEyNTYtZUtoYXlpOExFUXdwNE5LeE4rQ2ZDaCszcU9WVXRKbjNRTlowVGNpV0xQND0iIGNyb3Nzb3JpZ2luPSJhbm9ueW1vdXMiPjwvc2NyaXB0PgogICAgPHNjcmlwdD4KICAgICAgZnVuY3Rpb24gY29kZSgpIHsKICAgICAgICByZXR1cm4gJCgiI2NvZGUiKS50ZXh0KCk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHVybCgpIHsKICAgICAgICByZXR1cm4gJCgiI3VybCIpLnZhbCgpOyAgIAogICAgICB9CgogICAgICBmdW5jdGlvbiBiYXJrVGV4dCgpIHsKICAgICAgICByZXR1cm4gJCgnI2JhcmstaW5wdXQnKS52YWwoKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gYXVkaW9VcmwoY29kZSwgdGV4dCkgewogICAgICAgIGNvbnN0IHJlcXVlc3QgPSBtYWtlUmVxdWVzdChjb2RlLCB0ZXh0KTsKICAgICAgICByZXR1cm4gdXJsKCkgKyAnPycgKyAkLnBhcmFtKHJlcXVlc3QpOwogICAgICB9CgogICAgICBmdW5jdGlvbiBhdWRpb0NodW5rSGFuZGxlcihjaHVuaykgewogICAgICAgIGNvbnNvbGUubG9nKCdhdWRpbyBjaHVuaycsIGNodW5rKTsKICAgICAgICBjb25zdCBibG9iID0gbmV3IEJsb2IoW2NodW5rXSwgeyB0eXBlOiAnYXVkaW8vd2F2JyB9KTsKICAgICAgICBzZXRBdWRpb0RhdGFVUkwoYmxvYik7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIGF1ZGlvRG9uZUhhbmRsZXIoKSB7CiAgICAgICAgY29uc29sZS5sb2coJ2F1ZGlvIGRvbmUnKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gaGFuZGxlU3BlYWsoKSB7CiAgICAgICAgcmV0dXJuIGdldEF1ZGlvKHVybCgpLCBjb2RlKCksIGJhcmtUZXh0KCksIGF1ZGlvQ2h1bmtIYW5kbGVyLCBhdWRpb0RvbmVIYW5kbGVyKTsKICAgICAgfQoKICAgICAgY29uc3QgYXVkaW8gPSBuZXcgQXVkaW8oKTsKCiAgICAgIGZ1bmN0aW9uIG1ha2VBdWRpbyhibG9iKSB7CiAgICAgICAgY29uc3QgdGltZSA9IGF1ZGlvLmN1cnJlbnRUaW1lOwogICAgICAgIGF1ZGlvLnNyYyA9IFVSTC5jcmVhdGVPYmplY3RVUkwoYmxvYik7CiAgICAgICAgYXVkaW8uY29udHJvbHMgPSB0cnVlOwogICAgICAgIGF1ZGlvLnBsYXkoKS50aGVuKCgpID0%2bIHsKICAgICAgICAgIGF1ZGlvLmN1cnJlbnRUaW1lID0gdGltZTsKICAgICAgICB9KS5jYXRjaCgoZXJyb3IpID0%2bIHsKICAgICAgICAgIGNvbnNvbGUuZXJyb3IoJ2F1ZGlvIHBsYXkgZXJyb3InLCBlcnJvcik7CiAgICAgICAgfSk7CiAgICAgIH0KCiAgICAgIGZ1bmN0aW9uIHNldEF1ZGlvRGF0YVVSTChibG9iKSB7CiAgICAgICAgY29uc3QgYXVkaW9EaXYgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnYmFyay1vdXRwdXQnKTsKICAgICAgICBhdWRpb0Rpdi5yZXBsYWNlQ2hpbGRyZW4oYXVkaW8pOwogICAgICAgIGNvbnNvbGUubG9nKCdzZXR0aW5nIGF1ZGlvIGRhdGEgdXJsJywgYmxvYik7CiAgICAgICAgbWFrZUF1ZGlvKGJsb2IpOwogICAgICB9CiAgICA8L3NjcmlwdD4KICA8L2hlYWQ%2bCiAgPGJvZHk%2bCiAgICA8bGFiZWwgZm9yPSJ1cmwiPkV4ZWMgVVJMPC9sYWJlbD4KICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idXJsIiB2YWx1ZT0iaHR0cDovL2xvY2FsaG9zdDo5ODc2L3Rlc3Qud2F2Ij48L2lucHV0PgogICAgPGxhYmVsIGZvcj0iYmFyay1pbnB1dCI%2bVGV4dCB0byBzcGVhazwvbGFiZWw%2bCiAgICA8dGV4dGFyZWEgaWQ9ImJhcmstaW5wdXQiPlRlc3Qgc2VudGVuY2UuIEFuZCBhIHNlY29uZCB0ZXN0LjwvdGV4dGFyZWE%2bCiAgICA8YnV0dG9uIG9uY2xpY2s9ImhhbmRsZVNwZWFrKCkiPlNwZWFrPC9idXR0b24%2bCiAgICA8ZGl2IGlkPSJiYXJrLW91dHB1dCI%2bPC9kaXY%2bCiAgICA8cHJlPgogICAgICA8Y29kZSBpZD0iY29kZSIgY29udGVudGVkaXRhYmxlPSJ0cnVlIj4KIyBleGFtcGxlL2JhcmsvYmFyay5weQoKCmRlZiBydW4ocmVxdWVzdCwgdGV4dDogc3RyLCBzcGVha2VyOiBzdHIgPSAidjIvZW5fc3BlYWtlcl82Iik6CiAgICBpbXBvcnQgb3MKICAgIGltcG9ydCBsb2dnaW5nCiAgICBpbXBvcnQgaW8KICAgIGltcG9ydCBubHRrCiAgICBpbXBvcnQgbnVtcHkgYXMgbnAKICAgIGZyb20gc2NpcHkuaW8ud2F2ZmlsZSBpbXBvcnQgd3JpdGUgYXMgd3JpdGVfd2F2CgogICAgb3MuZW52aXJvblsiQ1VEQV9WSVNJQkxFX0RFVklDRVMiXSA9ICIwIgogICAgb3MuZW52aXJvblsiU1VOT19VU0VfU01BTExfTU9ERUxTIl0gPSAiMCIKICAgIG9zLmVudmlyb25bIlNVTk9fT0ZGTE9BRF9DUFUiXSA9ICIwIgoKICAgIGZyb20gYmFyay5nZW5lcmF0aW9uIGltcG9ydCBnZW5lcmF0ZV90ZXh0X3NlbWFudGljLCBwcmVsb2FkX21vZGVscwogICAgZnJvbSBiYXJrIGltcG9ydCBnZW5lcmF0ZV9hdWRpbywgU0FNUExFX1JBVEUKCiAgICBwcmVsb2FkX21vZGVscygpCgogICAgZGVmIGdlbmVyYXRlKCk6CiAgICAgICAgc2VudGVuY2VzID0gbmx0ay5zZW50X3Rva2VuaXplKHRleHQucmVwbGFjZSgiXG4iLCAiICIpLnN0cmlwKCkpCiAgICAgICAgZnVsbF93YXZfYXJyYXkgPSBOb25lCiAgICAgICAgZm9yIGksIHNlbnRlbmNlIGluIGVudW1lcmF0ZShzZW50ZW5jZXMpOgogICAgICAgICAgICBsb2dnaW5nLmluZm8oCiAgICAgICAgICAgICAgICAiR2VuZXJhdGluZyBzZW50ZW5jZSAlZC8lZDogJXMiLCBpICsgMSwgbGVuKHNlbnRlbmNlcyksIHNlbnRlbmNlCiAgICAgICAgICAgICkKICAgICAgICAgICAgd2F2X2FycmF5ID0gZ2VuZXJhdGVfYXVkaW8oc2VudGVuY2UsIGhpc3RvcnlfcHJvbXB0PXNwZWFrZXIpCiAgICAgICAgICAgIGZ1bGxfd2F2X2FycmF5ID0gKAogICAgICAgICAgICAgICAgd2F2X2FycmF5CiAgICAgICAgICAgICAgICBpZiBmdWxsX3dhdl9hcnJheSBpcyBOb25lCiAgICAgICAgICAgICAgICBlbHNlIG5wLmNvbmNhdGVuYXRlKChmdWxsX3dhdl9hcnJheSwgd2F2X2FycmF5KSkKICAgICAgICAgICAgKQogICAgICAgICAgICBpZiBpID09IGxlbihzZW50ZW5jZXMpIC0gMToKICAgICAgICAgICAgICAgIGJ1ZiA9IGlvLkJ5dGVzSU8oKQogICAgICAgICAgICAgICAgd3JpdGVfd2F2KGJ1ZiwgU0FNUExFX1JBVEUsIGZ1bGxfd2F2X2FycmF5KQogICAgICAgICAgICAgICAgeWllbGQgYnVmLnJlYWQoKQoKICAgIHJldHVybiBnZW5lcmF0ZSgpLCB7IkNvbnRlbnQtVHlwZSI6ICJhdWRpby9tcGVnIn0KCiAgICAgIDwvY29kZT4KICAgIDwvcHJlPgogIDwvYm9keT4KPC9odG1sPgoKJycnKQo%3d
+: http://localhost:9876/?code_b64=CmRlZiBydW4oXyk6CiAgcmV0dXJuIChyJycnCjwhZG9jdHlwZSBodG1sPgo8aHRtbD4KICA8aGVhZD4KICAgIDx0aXRsZT5iYXJrIHRlc3Q8L3RpdGxlPgogICAgPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSJodHRwczovL2Nkbi5zaW1wbGVjc3Mub3JnL3NpbXBsZS5taW4uY3NzIj4KICAgIDxzY3JpcHQ%2bCmZ1bmN0aW9uIG1ha2VSZXF1ZXN0KGNvZGUsIHRleHQsIHNwZWFrZXIsIHNlbnRlbmNlVGVtcGxhdGUsIHNwbGl0VHlwZSkgewogIHJldHVybiB7CiAgICAnY29kZV9iNjQnOiBidG9hKGNvZGUpLAogICAgJ2t3YXJnc19iNjQnOiBidG9hKEpTT04uc3RyaW5naWZ5KHsKICAgICAgJ3RleHQnOiB0ZXh0LnJlcGxhY2UoL1xuL2csICdcXG4nKSwKICAgICAgJ3NwZWFrZXInOiBzcGVha2VyLAogICAgICAnc2VudGVuY2VfdGVtcGxhdGUnOiBzZW50ZW5jZVRlbXBsYXRlLAogICAgICAnc3BsaXRfdHlwZSc6IHNwbGl0VHlwZQogICAgfSkpLAogIH07Cn0KCmZ1bmN0aW9uIGF1ZGlvVXJsKAogIHVybCwgY29kZSwgdGV4dCwgc3BlYWtlciwgc2VudGVuY2VUZW1wbGF0ZSwgc3BsaXRUeXBlKSB7CiAgY29uc3QgcmVxdWVzdCA9IG1ha2VSZXF1ZXN0KAogICAgY29kZSwgdGV4dCwgc3BlYWtlciwgc2VudGVuY2VUZW1wbGF0ZSwgc3BsaXRUeXBlKTsKICByZXR1cm4gdXJsICsgJz8nICsgJC5wYXJhbShyZXF1ZXN0KTsKfQoKYXN5bmMgZnVuY3Rpb24gZ2V0QXVkaW8oCiAgdXJsLCBjb2RlLCB0ZXh0LCBzcGVha2VyLCBzZW50ZW5jZVRlbXBsYXRlLCBzcGxpdFR5cGUsIG9uQ2h1bmspIHsKICBjb25zdCBzb3VyY2UgPSBuZXcgRXZlbnRTb3VyY2UoCiAgICBhdWRpb1VybCh1cmwsIGNvZGUsIHRleHQsIHNwZWFrZXIsIHNlbnRlbmNlVGVtcGxhdGUsIHNwbGl0VHlwZSkpOwogIHNvdXJjZS5vbm1lc3NhZ2UgPSBmdW5jdGlvbihldmVudCkgewogICAgaWYgKGV2ZW50LmRhdGEudG9Mb3dlckNhc2UoKSA9PSAnZG9uZScpIHsKICAgICAgc291cmNlLmNsb3NlKCk7CiAgICAgIHJldHVybjsKICAgIH0KICAgIGNvbnN0IGNodW5rID0gSlNPTi5wYXJzZShldmVudC5kYXRhKTsKICAgIG9uQ2h1bmsoY2h1bmspOwogIH0KfQoKPC9zY3JpcHQ%2bCiAgICA8c2NyaXB0IHNyYz0iaHR0cHM6Ly9jb2RlLmpxdWVyeS5jb20vanF1ZXJ5LTMuNy4xLmpzIiBpbnRlZ3JpdHk9InNoYTI1Ni1lS2hheWk4TEVRd3A0Tkt4TitDZkNoKzNxT1ZVdEpuM1FOWjBUY2lXTFA0PSIgY3Jvc3NvcmlnaW49ImFub255bW91cyI%2bPC9zY3JpcHQ%2bCiAgICA8c2NyaXB0PgoKICAgICAgZnVuY3Rpb24gYXVkaW9DaHVua0hhbmRsZXIoY2h1bmspIHsKICAgICAgICBjb25zb2xlLmxvZygnYXVkaW8gY2h1bmsnLCBjaHVuayk7CiAgICAgICAgd2F2QjY0ID0gY2h1bmtbJ2N1bXVsYXRpdmUnXTsKICAgICAgICBjb25zb2xlLmxvZygnYXVkaW8gY2h1bmsgYjY0Jywgd2F2QjY0KTsKICAgICAgICB3YXZEYXRhID0gVWludDhBcnJheS5mcm9tKGF0b2Iod2F2QjY0KSwgYyA9PiBjLmNoYXJDb2RlQXQoMCkpCiAgICAgICAgY29uc29sZS5sb2coJ2F1ZGlvIGNodW5rIGRhdGEnLCB3YXZEYXRhKTsKICAgICAgICBjb25zdCBibG9iID0gbmV3IEJsb2IoW3dhdkRhdGFdLCB7IHR5cGU6ICdhdWRpby93YXYnIH0pOwogICAgICAgIHNldEF1ZGlvRGF0YVVSTChibG9iKTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gaGFuZGxlU3BlYWsoKSB7CiAgICAgICAgcmV0dXJuIGdldEF1ZGlvKAogICAgICAgICAgICAkKCIjdXJsIikudmFsKCksCiAgICAgICAgICAgICQoIiNjb2RlIikudGV4dCgpLAogICAgICAgICAgICAkKCcjYmFyay1pbnB1dCcpLnZhbCgpLAogICAgICAgICAgICAkKCIjc3BlYWtlciIpLnZhbCgpLAogICAgICAgICAgICAkKCIjc2VudGVuY2UtdGVtcGxhdGUiKS52YWwoKSwKICAgICAgICAgICAgJCgiI3NwbGl0LXR5cGUiKS52YWwoKSwKICAgICAgICAgICAgYXVkaW9DaHVua0hhbmRsZXIKICAgICAgICApOwogICAgICB9CgogICAgICBjb25zdCBhdWRpbyA9IG5ldyBBdWRpbygpOwoKICAgICAgZnVuY3Rpb24gbWFrZUF1ZGlvKGJsb2IpIHsKICAgICAgICBjb25zdCB0aW1lID0gYXVkaW8uY3VycmVudFRpbWUgfHwgYXVkaW8uZHVyYXRpb247CiAgICAgICAgYXVkaW8uc3JjID0gVVJMLmNyZWF0ZU9iamVjdFVSTChibG9iKTsKICAgICAgICBhdWRpby5jb250cm9scyA9IHRydWU7CiAgICAgICAgYXVkaW8ucGxheSgpLnRoZW4oKCkgPT4gewogICAgICAgICAgaWYgKHRpbWUpIHsKICAgICAgICAgICAgYXVkaW8uY3VycmVudFRpbWUgPSB0aW1lOwogICAgICAgICAgfQogICAgICAgIH0pLmNhdGNoKChlcnJvcikgPT4gewogICAgICAgICAgY29uc29sZS5lcnJvcignYXVkaW8gcGxheSBlcnJvcicsIGVycm9yKTsKICAgICAgICB9KTsKICAgICAgfQoKICAgICAgZnVuY3Rpb24gc2V0QXVkaW9EYXRhVVJMKGJsb2IpIHsKICAgICAgICBjb25zb2xlLmxvZygnc2V0dGluZyBhdWRpbyBkYXRhIHVybCcsIGJsb2IpOwogICAgICAgIG1ha2VBdWRpbyhibG9iKTsKICAgICAgfQoKICAgICAgJChmdW5jdGlvbigpIHsKICAgICAgICAgIGNvbnN0IGF1ZGlvRGl2ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Jhcmstb3V0cHV0Jyk7CiAgICAgICAgICBhdWRpb0Rpdi5yZXBsYWNlQ2hpbGRyZW4oYXVkaW8pOwogICAgICB9KTsKICAgIDwvc2NyaXB0PgogIDwvaGVhZD4KICA8Ym9keT4KICAgIDxsYWJlbCBmb3I9InVybCI%2bRXhlYyBVUkw8L2xhYmVsPgogICAgPGlucHV0IHR5cGU9InRleHQiIGlkPSJ1cmwiIHZhbHVlPSJodHRwOi8vbG9jYWxob3N0Ojk4NzYiPjwvaW5wdXQ%2bCiAgICA8bGFiZWwgZm9yPSJiYXJrLWlucHV0Ij5UZXh0IHRvIHNwZWFrPC9sYWJlbD4KICAgIDx0ZXh0YXJlYSBpZD0iYmFyay1pbnB1dCI%2bSXQgd2FzIGEgYnJpZ2h0IGNvbGQgZGF5IGluIEFwcmlsLCBhbmQgdGhlIGNsb2NrcyB3ZXJlIHN0cmlraW5nIHRoaXJ0ZWVuLiBXaW5zdG9uIFNtaXRoLCBoaXMgY2hpbiBudXp6bGVkIGludG8gaGlzIGJyZWFzdCBpbiBhbiBlZmZvcnQgdG8gZXNjYXBlIHRoZSB2aWxlIHdpbmQsIHNsaXBwZWQgcXVpY2tseSB0aHJvdWdoIHRoZSBnbGFzcyBkb29ycyBvZiBWaWN0b3J5IE1hbnNpb25zLCB0aG91Z2ggbm90IHF1aWNrbHkgZW5vdWdoIHRvIHByZXZlbnQgYSBzd2lybCBvZiBncml0dHkgZHVzdCBmcm9tIGVudGVyaW5nIGFsb25nIHdpdGggaGltLiBUaGUgaGFsbHdheSBzbWVsdCBvZiBib2lsZWQgY2FiYmFnZSBhbmQgb2xkIHJhZyBtYXRzLiBBdCBvbmUgZW5kIG9mIGl0IGEgY29sb3VyZWQgcG9zdGVyLCB0b28gbGFyZ2UgZm9yIGluZG9vciBkaXNwbGF5LCBoYWQgYmVlbiB0YWNrZWQgdG8gdGhlIHdhbGwuIEl0IGRlcGljdGVkIHNpbXBseSBhbiBlbm9ybW91cyBmYWNlLCBtb3JlIHRoYW4gYSBtZXRyZSB3aWRlOiB0aGUgZmFjZSBvZiBhIG1hbiBvZiBhYm91dCBmb3J0eS1maXZlLCB3aXRoIGEgaGVhdnkgYmxhY2sgbW91c3RhY2hlIGFuZCBydWdnZWRseSBoYW5kc29tZSBmZWF0dXJlcy4gV2luc3RvbiBtYWRlIGZvciB0aGUgc3RhaXJzLiBJdCB3YXMgbm8gdXNlIHRyeWluZyB0aGUgbGlmdC4gRXZlbiBhdCB0aGUgYmVzdCBvZiB0aW1lcyBpdCB3YXMgc2VsZG9tIHdvcmtpbmcsIGFuZCBhdCBwcmVzZW50IHRoZSBlbGVjdHJpYyBjdXJyZW50IHdhcyBjdXQgb2ZmIGR1cmluZyBkYXlsaWdodCBob3Vycy4gSXQgd2FzIHBhcnQgb2YgdGhlIGVjb25vbXkgZHJpdmUgaW4gcHJlcGFyYXRpb24gZm9yIEhhdGVXZWVrLiBUaGUgZmxhdCB3YXMgc2V2ZW4gZmxpZ2h0cyB1cCwgYW5kIFdpbnN0b24sIHdobyB3YXMgdGhpcnR5LW5pbmUgYW5kIGhhZCBhIHZhcmljb3NlIHVsY2VyIGFib3ZlIGhpcyByaWdodCBhbmtsZSwgd2VudCBzbG93bHksIHJlc3Rpbmcgc2V2ZXJhbCB0aW1lcyBvbiB0aGUgd2F5LiBPbiBlYWNoIGxhbmRpbmcsIG9wcG9zaXRlIHRoZSBsaWZ0IHNoYWZ0LCB0aGUgcG9zdGVyIHdpdGggdGhlIGVub3Jtb3VzIGZhY2UgZ2F6ZWQgZnJvbSB0aGUgd2FsbC4gSXQgd2FzIG9uZSBvZiB0aG9zZSBwaWN0dXJlcyB3aGljaCBhcmUgc28gY29udHJpdmVkIHRoYXQgdGhlIGV5ZXMgZm9sbG93IHlvdSBhYm91dCB3aGVuIHlvdSBtb3ZlLiBCSUcgQlJPVEhFUiBJUyBXQVRDSElORyBZT1UsIHRoZSBjYXB0aW9uIGJlbmVhdGggaXQgcmFuLjwvdGV4dGFyZWE%2bCiAgICA8bGFiZWwgZm9yPSJzcGxpdC10eXBlIj5TcGxpdCBPbjo8L2xhYmVsPgogICAgPHNlbGVjdCBpZD0ic3BsaXQtdHlwZSI%2bCiAgICAgIDxvcHRpb24gdmFsdWU9InNlbnRlbmNlIj5TZW50ZW5jZTwvb3B0aW9uPgogICAgICA8b3B0aW9uIHZhbHVlPSJub25lIj5Ob25lPC9vcHRpb24%2bCiAgICA8L3NlbGVjdD4KICAgIDxsYWJlbCBmb3I9InNwZWFrZXIiPgogICAgPGEgaHJlZj0iaHR0cHM6Ly9zdW5vLWFpLm5vdGlvbi5zaXRlLzhiOGU4NzQ5ZWQ1MTRiMGNiZjNmNjk5MDEzNTQ4NjgzP3Y9YmM2N2NmZjc4NmIwNGI1MGIzY2ViNzU2ZmQwNWY2OGMiPlNwZWFrZXI8L2E%2bCiAgICA8L2xhYmVsPgogICAgPGlucHV0IHR5cGU9InRleHQiIGlkPSJzcGVha2VyIiB2YWx1ZT0idjIvZnJfc3BlYWtlcl8xIj48L2lucHV0PgogICAgPGxhYmVsIGZvcj0ic2VudGVuY2UtdGVtcGxhdGUiPlNlbnRlbmNlIFRlbXBsYXRlPC9sYWJlbD4KICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0ic2VudGVuY2UtdGVtcGxhdGUiIHZhbHVlPSIlcyI%2bPC9pbnB1dD4KICAgIDxidXR0b24gb25jbGljaz0iaGFuZGxlU3BlYWsoKSI%2bU3BlYWs8L2J1dHRvbj4KICAgIDxkaXYgaWQ9ImJhcmstb3V0cHV0Ij48L2Rpdj4KICAgIDxwcmU%2bCiAgICAgIDxjb2RlIGlkPSJjb2RlIiBjb250ZW50ZWRpdGFibGU9InRydWUiPgojIGV4YW1wbGUvYmFyay9iYXJrLnB5CmZyb20gdHlwaW5nIGltcG9ydCBMaXRlcmFsCgpkZWYgcnVuKHJlcXVlc3QsCiAgICAgICAgdGV4dDogc3RyLAogICAgICAgIHNwZWFrZXI6IHN0ciA9ICJ2Mi9lbl9zcGVha2VyXzYiLAogICAgICAgIHNlbnRlbmNlX3RlbXBsYXRlOiBzdHIgPSAiJXMiLAogICAgICAgIHNwbGl0X3R5cGU6IExpdGVyYWxbInNlbnRlbmNlIiwgIm5vbmUiXSA9ICJzZW50ZW5jZSIpOgoKICAgIGltcG9ydCBvcwogICAgaW1wb3J0IGxvZ2dpbmcKICAgIGltcG9ydCBqc29uCiAgICBpbXBvcnQgaW8KICAgIGltcG9ydCBubHRrCiAgICBpbXBvcnQgbnVtcHkgYXMgbnAKICAgIGltcG9ydCBiYXNlNjQKICAgIGZyb20gc2NpcHkuaW8ud2F2ZmlsZSBpbXBvcnQgd3JpdGUgYXMgd3JpdGVfd2F2CgogICAgb3MuZW52aXJvblsiQ1VEQV9WSVNJQkxFX0RFVklDRVMiXSA9ICIwIgogICAgb3MuZW52aXJvblsiU1VOT19VU0VfU01BTExfTU9ERUxTIl0gPSAiMCIKICAgIG9zLmVudmlyb25bIlNVTk9fT0ZGTE9BRF9DUFUiXSA9ICIwIgoKICAgIGZyb20gYmFyay5nZW5lcmF0aW9uIGltcG9ydCBnZW5lcmF0ZV90ZXh0X3NlbWFudGljLCBwcmVsb2FkX21vZGVscywgU0FNUExFX1JBVEUKICAgIGZyb20gYmFyay5hcGkgaW1wb3J0IHNlbWFudGljX3RvX3dhdmVmb3JtCgogICAgcHJlbG9hZF9tb2RlbHMoKQoKICAgIGRlZiBiYXNlNjRfd2F2KGFycik6CiAgICAgICAgYnVmID0gaW8uQnl0ZXNJTygpCiAgICAgICAgd3JpdGVfd2F2KGJ1ZiwgU0FNUExFX1JBVEUsIGFycikKICAgICAgICB3YXYgPSBidWYuZ2V0dmFsdWUoKQogICAgICAgIHJldHVybiBiYXNlNjQuYjY0ZW5jb2RlKHdhdikuZGVjb2RlKCJ1dGYtOCIpCgogICAgZGVmIGdlbmVyYXRlKCk6CiAgICAgICAgY2xlYW5fdGV4dCA9IHRleHQucmVwbGFjZSgiXG4iLCAiICIpLnN0cmlwKCkKICAgICAgICBtYXRjaCBzcGxpdF90eXBlOgogICAgICAgICAgICBjYXNlICJzZW50ZW5jZSI6CiAgICAgICAgICAgICAgICBzZW50ZW5jZXMgPSBubHRrLnNlbnRfdG9rZW5pemUoY2xlYW5fdGV4dCkKICAgICAgICAgICAgY2FzZSAibm9uZSI6CiAgICAgICAgICAgICAgICBzZW50ZW5jZXMgPSBbY2xlYW5fdGV4dF0KICAgICAgICBmdWxsX3dhdl9hcnJheSA9IE5vbmUKICAgICAgICBmb3IgaSwgcmF3X3NlbnRlbmNlIGluIGVudW1lcmF0ZShzZW50ZW5jZXMpOgogICAgICAgICAgICBzZW50ZW5jZSA9IHNlbnRlbmNlX3RlbXBsYXRlICUgcmF3X3NlbnRlbmNlCiAgICAgICAgICAgIGxvZ2dpbmcuaW5mbygKICAgICAgICAgICAgICAgICJHZW5lcmF0aW5nIHNlbnRlbmNlICVkLyVkOiAlcyIsIGkgKyAxLCBsZW4oc2VudGVuY2VzKSwgc2VudGVuY2UKICAgICAgICAgICAgKQogICAgICAgICAgICBzZW1hbnRpY190b2tlbnMgPSBnZW5lcmF0ZV90ZXh0X3NlbWFudGljKAogICAgICAgICAgICAgICAgc2VudGVuY2UsCiAgICAgICAgICAgICAgICBoaXN0b3J5X3Byb21wdD1zcGVha2VyLAogICAgICAgICAgICAgICAgdGVtcD0wLjYsCiAgICAgICAgICAgICAgICBtaW5fZW9zX3A9MC4wNSwKICAgICAgICAgICAgKQogICAgICAgICAgICB3YXZfYXJyYXkgPSBzZW1hbnRpY190b193YXZlZm9ybShzZW1hbnRpY190b2tlbnMsIGhpc3RvcnlfcHJvbXB0PXNwZWFrZXIpCiAgICAgICAgICAgIGZ1bGxfd2F2X2FycmF5ID0gKAogICAgICAgICAgICAgICAgd2F2X2FycmF5CiAgICAgICAgICAgICAgICBpZiBmdWxsX3dhdl9hcnJheSBpcyBOb25lCiAgICAgICAgICAgICAgICBlbHNlIG5wLmNvbmNhdGVuYXRlKChmdWxsX3dhdl9hcnJheSwgd2F2X2FycmF5KSkKICAgICAgICAgICAgKQoKICAgICAgICAgICAgeWllbGQgImRhdGE6ICVzXG5cbiIgJSAoCiAgICAgICAgICAgICAgICBqc29uLmR1bXBzKAogICAgICAgICAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgICAgICAgICAgInNlbnRlbmNlIjogYmFzZTY0X3dhdih3YXZfYXJyYXkpLAogICAgICAgICAgICAgICAgICAgICAgICAiY3VtdWxhdGl2ZSI6IGJhc2U2NF93YXYoZnVsbF93YXZfYXJyYXkpLAogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgKQogICAgICAgIHlpZWxkICJkYXRhOiBET05FXG5cbiIKCiAgICByZXR1cm4gZ2VuZXJhdGUoKSwgeyJDb250ZW50LVR5cGUiOiAidGV4dC9ldmVudC1zdHJlYW0ifQoKICAgICAgPC9jb2RlPgogICAgPC9wcmU%2bCiAgPC9ib2R5Pgo8L2h0bWw%2bCgonJycpCg%3d%3d
 
 
 Whew. We can open that ~owt~ URL in a browser and play with the web app, which itself makes calls to ~owt~ injecting the TTS logic.
@@ -341,7 +426,9 @@ function owtInOwt() {
   PAYLOAD_CODE_B64="$3"
   PAYLOAD_KWARGS_B64="$4"
   read -r -d '' CODE << EOF
-def run(request, payload_code_b64, payload_kwargs_b64):
+def run(**kwargs):
+  payload_code_b64 = kwargs['payload_code_b64']
+  payload_kwargs_b64 = kwargs['payload_kwargs_b64']
   _globals = {'__name__': __name__+'_new',
               'new_port': args.port + 1}
   _locals = {}
@@ -363,6 +450,7 @@ server_thread = Process(target=main)
     print('Killed server on %d' % args.port)
 
   from multiprocessing import Process
+  from flask import request
   import requests
   import urllib
 
@@ -399,7 +487,7 @@ bash -c "$CMD"
 #+end_src
 
 #+results: 
-: Running: curl -G --data-urlencode code_b64=ZGVmIHJ1bihyZXF1ZXN0LCBwYXlsb2FkX2NvZGVfYjY0LCBwYXlsb2FkX2t3YXJnc19iNjQpOgogIF9nbG9iYWxzID0geydfX25hbWVfXyc6IF9fbmFtZV9fKydfbmV3JywKICAgICAgICAgICAgICAnbmV3X3BvcnQnOiBhcmdzLnBvcnQgKyAxfQogIF9sb2NhbHMgPSB7fQogIHByaW50KCdnb2luZyBvbmUgbGV2ZWwgZG93biB0byBwb3J0ICVzJyAlIF9nbG9iYWxzWyduZXdfcG9ydCddKQoKICBleGVjKCcnJwpwcmludCgnT25lIGxldmVsIGRlZXBlciwgaW1wb3J0aW5nIG93dCcpCmZyb20gb3d0IGltcG9ydCAqCmZyb20gbXVsdGlwcm9jZXNzaW5nIGltcG9ydCBQcm9jZXNzCmFyZ3MucG9ydCA9IG5ld19wb3J0CnNlcnZlcl90aHJlYWQgPSBQcm9jZXNzKHRhcmdldD1tYWluKQonJycsIF9nbG9iYWxzLCBfbG9jYWxzKQoKICBkZWYga2lsbCgpOgogICAgaW1wb3J0IHRpbWUKICAgICMgdGltZS5zbGVlcCgxKQogICAgcHJpbnQoJ0tpbGxpbmcgc2VydmVyIG9uICVzJyAlIGFyZ3MucG9ydCkKICAgIF9sb2NhbHNbJ3NlcnZlcl90aHJlYWQnXS50ZXJtaW5hdGUoKQogICAgcHJpbnQoJ0tpbGxlZCBzZXJ2ZXIgb24gJWQnICUgYXJncy5wb3J0KQoKICBmcm9tIG11bHRpcHJvY2Vzc2luZyBpbXBvcnQgUHJvY2VzcwogIGltcG9ydCByZXF1ZXN0cwogIGltcG9ydCB1cmxsaWIKCiAgX2xvY2Fsc1snc2VydmVyX3RocmVhZCddLnN0YXJ0KCkKICBib290c3RyYXBwZWRfdXJsID0gZiJodHRwOi8vbG9jYWxob3N0OntfZ2xvYmFsc1snbmV3X3BvcnQnXX0ve3JlcXVlc3QucGF0aH0/Y29kZV9iNjQ9e3VybGxpYi5wYXJzZS5xdW90ZV9wbHVzKHBheWxvYWRfY29kZV9iNjQpfSZrd2FyZ3NfYjY0PXt1cmxsaWIucGFyc2UucXVvdGVfcGx1cyhwYXlsb2FkX2t3YXJnc19iNjQpfSIKICBwcmludChib290c3RyYXBwZWRfdXJsKQogIHJlc3AgPSByZXF1ZXN0cy5nZXQoYm9vdHN0cmFwcGVkX3VybCkuY29udGVudAogIFByb2Nlc3ModGFyZ2V0PWtpbGwpLnN0YXJ0KCkKICByZXR1cm4gcmVzcAo= --data-urlencode kwargs_b64=eyJwYXlsb2FkX2NvZGVfYjY0IjoiSXlCbGVHRnRjR3hsTDJWamFHOHZaV05vYnk1d2VRb0tDbVJsWmlCeWRXNG9jbVZ4ZFdWemRDd2dibUZ0WlQxT2IyNWxLVG9LSUNBZ0lISmxkSFZ5YmlCbUlraGxiR3h2TENCN2JtRnRaWDBzSUdaeWIyMGdlMU5sY25abGNpNXphVzVuS0NrdVlXUmtjbVZ6YzMwNmUxTmxjblpsY2k1emFXNW5LQ2t1Y0c5eWRIMGhJZ289IiwgInBheWxvYWRfa3dhcmdzX2I2NCI6ICJleWR1WVcxbEp6b2dKMjkzZEMxcGJuTnBaR1V0YjNkMEozMEsifQo= http://localhost:9876
+: Running: curl -G --data-urlencode code_b64=ZGVmIHJ1bigqKmt3YXJncyk6CiAgcGF5bG9hZF9jb2RlX2I2NCA9IGt3YXJnc1sncGF5bG9hZF9jb2RlX2I2NCddCiAgcGF5bG9hZF9rd2FyZ3NfYjY0ID0ga3dhcmdzWydwYXlsb2FkX2t3YXJnc19iNjQnXQogIF9nbG9iYWxzID0geydfX25hbWVfXyc6IF9fbmFtZV9fKydfbmV3JywKICAgICAgICAgICAgICAnbmV3X3BvcnQnOiBhcmdzLnBvcnQgKyAxfQogIF9sb2NhbHMgPSB7fQogIHByaW50KCdnb2luZyBvbmUgbGV2ZWwgZG93biB0byBwb3J0ICVzJyAlIF9nbG9iYWxzWyduZXdfcG9ydCddKQoKICBleGVjKCcnJwpwcmludCgnT25lIGxldmVsIGRlZXBlciwgaW1wb3J0aW5nIG93dCcpCmZyb20gb3d0IGltcG9ydCAqCmZyb20gbXVsdGlwcm9jZXNzaW5nIGltcG9ydCBQcm9jZXNzCmFyZ3MucG9ydCA9IG5ld19wb3J0CnNlcnZlcl90aHJlYWQgPSBQcm9jZXNzKHRhcmdldD1tYWluKQonJycsIF9nbG9iYWxzLCBfbG9jYWxzKQoKICBkZWYga2lsbCgpOgogICAgaW1wb3J0IHRpbWUKICAgICMgdGltZS5zbGVlcCgxKQogICAgcHJpbnQoJ0tpbGxpbmcgc2VydmVyIG9uICVzJyAlIGFyZ3MucG9ydCkKICAgIF9sb2NhbHNbJ3NlcnZlcl90aHJlYWQnXS50ZXJtaW5hdGUoKQogICAgcHJpbnQoJ0tpbGxlZCBzZXJ2ZXIgb24gJWQnICUgYXJncy5wb3J0KQoKICBmcm9tIG11bHRpcHJvY2Vzc2luZyBpbXBvcnQgUHJvY2VzcwogIGZyb20gZmxhc2sgaW1wb3J0IHJlcXVlc3QKICBpbXBvcnQgcmVxdWVzdHMKICBpbXBvcnQgdXJsbGliCgogIF9sb2NhbHNbJ3NlcnZlcl90aHJlYWQnXS5zdGFydCgpCiAgYm9vdHN0cmFwcGVkX3VybCA9IGYiaHR0cDovL2xvY2FsaG9zdDp7X2dsb2JhbHNbJ25ld19wb3J0J119L3tyZXF1ZXN0LnBhdGh9P2NvZGVfYjY0PXt1cmxsaWIucGFyc2UucXVvdGVfcGx1cyhwYXlsb2FkX2NvZGVfYjY0KX0ma3dhcmdzX2I2ND17dXJsbGliLnBhcnNlLnF1b3RlX3BsdXMocGF5bG9hZF9rd2FyZ3NfYjY0KX0iCiAgcHJpbnQoYm9vdHN0cmFwcGVkX3VybCkKICByZXNwID0gcmVxdWVzdHMuZ2V0KGJvb3RzdHJhcHBlZF91cmwpLmNvbnRlbnQKICBQcm9jZXNzKHRhcmdldD1raWxsKS5zdGFydCgpCiAgcmV0dXJuIHJlc3AK --data-urlencode kwargs_b64=eyJwYXlsb2FkX2NvZGVfYjY0IjoiSXlCbGVHRnRjR3hsTDJWamFHOHZaV05vYnk1d2VRb0tabkp2YlNCdmQzUWdhVzF3YjNKMElGTmxjblpsY2dvS0NtUmxaaUJ5ZFc0b2JtRnRaVDFPYjI1bEtUb0tJQ0FnSUhKbGRIVnliaUJtSWtobGJHeHZMQ0I3Ym1GdFpYMHNJR1p5YjIwZ2UxTmxjblpsY2k1emFXNW5LQ2t1WVdSa2NtVnpjMzA2ZTFObGNuWmxjaTV6YVc1bktDa3VjRzl5ZEgwaElnbz0iLCAicGF5bG9hZF9rd2FyZ3NfYjY0IjogImV5ZHVZVzFsSnpvZ0oyOTNkQzFwYm5OcFpHVXRiM2QwSjMwSyJ9Cg== http://localhost:9876
 : Result:
 : Hello, owt-inside-owt, from 0.0.0.0:9877!
 
@@ -408,11 +496,13 @@ Oh no... but that would mean you could... I wonder...
 
 #+begin_src python
 # example/bootstrap/bootstrap.py
+from owt import args
 
 
-def run(request, payload_code_b64, payload_kwargs_b64):
+def run(**kwargs):
     import os
-
+    payload_code_b64 = kwargs["payload_code_b64"]
+    payload_kwargs_b64 = kwargs["payload_kwargs_b64"]
     return os.popen(
         f'source ./example/meta/bootstrap.sh; $(owtInOwt http://localhost {args.port} "{payload_code_b64}" "{payload_kwargs_b64}")'
     ).read()
@@ -449,15 +539,15 @@ done
 #+results: 
 #+begin_example
 layer: owt-inside-owt
-Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9877): Max retries exceeded with url: /?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKCmRlZiBydW4ocmVxdWVzdCwgbmFtZT1Ob25lKToKICAgIHJldHVybiBmIkhlbGxvLCB7bmFtZX0sIGZyb20ge1NlcnZlci5zaW5nKCkuYWRkcmVzc306e1NlcnZlci5zaW5nKCkucG9ydH0hIgo%3D&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0In0K (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffee29963c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+Result:  Hello, owt-inside-owt, from 0.0.0.0:9877!
 layer: owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9878!
 layer: owt-inside-owt-inside-owt-inside-owt
-Result: 
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9879!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result: 
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9880!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result: 
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9881!
 #+end_example
 
 Hoo boy. How is Python a real language.

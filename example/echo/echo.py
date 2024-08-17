@@ -3,5 +3,5 @@
 from owt import Server
 
 
-def run(request, name=None):
+def run(name=None):
     return f"Hello, {name}, from {Server.sing().address}:{Server.sing().port}!"

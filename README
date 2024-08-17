@@ -2,6 +2,23 @@
 
 Serve up owt yer fancy on t'fly.
 
+** tl;dr
+
+Send the logic for a virtual endpoint along with a request:
+
+#+INCLUDE: "example/summat/simple.sh" src bash
+
+Allowing quick access to arbitrary Python libraries from anywhere you can make an HTTP request:
+
+#+BEGIN_SRC bash :exports both :results code replace
+./example/summat/simple.sh http://localhost:9876
+#+END_SRC
+
+#+RESULTS:
+: B'# EXAMPLE/SUMMAT/SIMPLE.SH\N\NURL="$1"\NREAD -R -D \'\' CODE << EOF\NFROM OWT IMPORT SUMMAT AS S\N\NRUN = (\N    S.PIPE()\N    .TO(S.LOADFILE(ROOT_DIR=\'./EXAMPLE/SUMMAT\'))\N    .TO(S.NAMEOUTPUT(NAME=\'BUF\'))\N    .TO(S.BUFFERSINK())\N    .F(LAMBDA AB: (STR(AB[0]).UPPER(), AB[1]))\N    .DONE()\N)\NEOF\N\NCURL --JSON $(JO \\\N  CODE_B64=$(ECHO "$CODE" | BASE64 -W 0) \\\N  KWARGS_B64=$(ECHO "{\'PATH\': \'SIMPLE.SH\'}" | BASE64 -W 0) \\\N) $URL\N'
+
+Most of the examples below show ~owt~ "in the raw", without using the pipelining syntax sugar.
+
 ** What's This?
 
 A server an endpoint whose request handling behaviour is configured by the request itself.
@@ -241,7 +258,7 @@ done
 
 #+RESULTS:
 #+begin_example
-> layer: owt-inside-owt
+layer: owt-inside-owt
 Result:  Hello, owt-inside-owt, from 0.0.0.0:9877!
 layer: owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9878!
@@ -251,7 +268,6 @@ layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9880!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9881!
-
 #+end_example
 
 Hoo boy. How is Python a real language.

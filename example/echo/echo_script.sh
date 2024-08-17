@@ -2,7 +2,7 @@
 
 URL="$1"
 read -r -d '' CODE << EOF
-def run(_, name: str):
+def run(name: str):
   return f'Hello, {name}!'
 EOF
 curl --json $(jo \

@@ -6,7 +6,9 @@ function owtInOwt() {
   PAYLOAD_CODE_B64="$3"
   PAYLOAD_KWARGS_B64="$4"
   read -r -d '' CODE << EOF
-def run(request, payload_code_b64, payload_kwargs_b64):
+def run(**kwargs):
+  payload_code_b64 = kwargs['payload_code_b64']
+  payload_kwargs_b64 = kwargs['payload_kwargs_b64']
   _globals = {'__name__': __name__+'_new',
               'new_port': args.port + 1}
   _locals = {}
@@ -28,6 +30,7 @@ server_thread = Process(target=main)
     print('Killed server on %d' % args.port)
 
   from multiprocessing import Process
+  from flask import request
   import requests
   import urllib
 
