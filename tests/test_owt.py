@@ -31,7 +31,7 @@ def client():
     with app.test_client() as client:
         yield client
 
-pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def init_server():
     app.config['TESTING'] = True
     Server.serve(address="127.0.0.1", port=9876, auth=None)
