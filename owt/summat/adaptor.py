@@ -1,10 +1,9 @@
 from typing import Any, Protocol, Unpack, TypedDict, Callable
-import flask
 import copy
 import dataclasses
 
 class Args(TypedDict):
-    __last__: Any = None
+    __last__: Any
 
 type Out[T] = Out[T]
 

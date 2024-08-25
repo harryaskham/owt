@@ -2,6 +2,7 @@
 mypy
 ruff
 python-lsp-server
+pytest
 
 # Owt
 flask

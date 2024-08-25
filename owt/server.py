@@ -113,7 +113,8 @@ class Server:
         global _SERVER
         _SERVER = cls(**kwargs)
         print(f"Owt starting on {_SERVER.address}:{_SERVER.port}")
-        app.run(port=_SERVER.port, host=_SERVER.address)
+        if not app.config.get('TESTING'):
+            app.run(port=_SERVER.port, host=_SERVER.address)
 
     @classmethod
     def sing(cls) -> "Server":
