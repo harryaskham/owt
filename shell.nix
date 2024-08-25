@@ -25,6 +25,7 @@ in
       fi
       source ./$VENV/bin/activate
       pip install -r requirements.txt
+      pip install -r requirements.dev.txt
       yes | mypy --install-types
       python -c "import nltk; nltk.download('punkt')"
       tmux
