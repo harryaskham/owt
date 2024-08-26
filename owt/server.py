@@ -291,7 +291,7 @@ def unsafe_exec(path: str | None) -> Any:
         case bytes():
             return make_response(result)
         case _:
-            return make_response(json.dumps(result))
+            return result
 
 
 def _run_unsafe_exec(request: Request) -> Any:
