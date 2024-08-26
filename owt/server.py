@@ -331,9 +331,9 @@ def _run_unsafe_exec(request: Request) -> Any:
         return f"Error executing Unsafe code: {e}", 500
 
 
-def main(argv=None):
+def main():
     try:
-        args = parser.parse_args(argv)
+        args = parser.parse_args()
     except argparse.ArgumentError as e:
         logging.error(f"Error parsing arguments: {e}")
         sys.exit(1)
@@ -346,4 +346,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
