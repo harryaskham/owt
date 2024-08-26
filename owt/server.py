@@ -7,8 +7,9 @@ import logging
 import os
 from dataclasses import dataclass
 from logging.config import dictConfig
-from typing import Any, Callable, Optional, TypedDict, Unpack
+from typing import Any, Callable, Optional
 from owt import summat
+from owt.summat import adaptor
 
 from flask import Flask, Response, request, Request
 from flask_cors import CORS
@@ -240,7 +241,7 @@ class Unsafe:
     def code_indented(self, indent: int) -> str:
         return "\n".join(self.lines(indent=indent))
 
-    def unsafe_exec_fn(self) -> Callable[[summat.Adaptor], Response]:
+    def unsafe_exec_fn(self) -> Callable[[adaptor.Adaptor], Response]:
         _globals = globals()
         _locals = locals()
         logging.info("Running code:\n\n%s", self.code_indented(4))

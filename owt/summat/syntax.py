@@ -1,6 +1,6 @@
 from typing import Unpack, Callable
-from .adaptor import Args, Adaptor, Out
-from .functional import F, FK, Const
+from owt.summat.adaptor import Args, Adaptor, Out
+from owt.summat.functional import F, FK, Const
 import dataclasses
 
 

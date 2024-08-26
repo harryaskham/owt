@@ -1,6 +1,5 @@
 from . import adaptor
-from typing import Any, Protocol, Mapping, Unpack, TypedDict
-import flask
+from typing import Unpack, TypedDict
 import os
 import io
 
