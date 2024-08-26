@@ -1,7 +1,7 @@
 { python3Packages, ... }:
 
 with python3Packages;
-buildPythonApplication {
+buildPythonPackage {
   pname = "owt";
   version = "0.1.0";
   pyproject = false;

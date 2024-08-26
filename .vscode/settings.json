@@ -1,3 +1,10 @@
 {
-  "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix"
+  "nixEnvSelector.nixFile": "develop\" ${workspaceFolder}/flake.nix #",
+  "nixEnvSelector.nixShellPath": "nix",
+  "nixEnvSelector.args": "",
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }

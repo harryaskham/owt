@@ -1,9 +1,18 @@
+import enum
 from typing import Any, Protocol, Unpack, TypedDict, Callable
+
 
 class Args(TypedDict):
     __last__: Any
 
+
 type Out[T] = Out[T]
+
+
+class Special: ...
+
+
+class Nullary(Special): ...
 
 
 class Adaptor[T: Args, U](Protocol):
@@ -11,6 +20,11 @@ class Adaptor[T: Args, U](Protocol):
 
     def done(self) -> Callable[[Unpack[T]], U]:
         def _run(**kwargs: Unpack[T]) -> U:
-            return self(**kwargs)[0]
-        return _run
+            result = self(**kwargs)[0]
+            match result:
+                case Nullary():
+                    return None
+                case _:
+                    return result
 
+        return _run

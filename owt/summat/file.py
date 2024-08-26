@@ -4,7 +4,7 @@ import os
 import io
 
 
-class LoadFile(adaptor.Adaptor['LoadFile.Kwargs', io.BytesIO]):
+class LoadFile(adaptor.Adaptor["LoadFile.Kwargs", io.BytesIO]):
     class Kwargs(TypedDict):
         path: str
 

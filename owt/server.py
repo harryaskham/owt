@@ -1,4 +1,6 @@
 import argparse
+import sys
+import builtins
 import base64
 import dataclasses
 import hashlib
@@ -8,10 +10,12 @@ import os
 from dataclasses import dataclass
 from logging.config import dictConfig
 from typing import Any, Callable, Optional
-from owt import summat
 from owt.summat import adaptor
+from owt.summat.syntax import pipe
 
-from flask import Flask, Response, request, Request
+pipe = pipe
+
+from flask import Flask, Response, request, Request, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 
@@ -51,16 +55,8 @@ parser.add_argument(
     help="Basic auth username:password_sha256. --auth for owt:owt",
 )
 
-try:
-    args = parser.parse_args()
-except argparse.ArgumentError as e:
-    logging.error(f"Error parsing arguments: {e}")
-    exit(1)
 
-
-app = Flask(
-    __name__  # , static_url_path="", static_folder="static", template_folder="example"
-)
+app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 auth = HTTPBasicAuth()
 CORS(app)
@@ -114,7 +110,7 @@ class Server:
         global _SERVER
         _SERVER = cls(**kwargs)
         print(f"Owt starting on {_SERVER.address}:{_SERVER.port}")
-        if not app.config.get('TESTING'):
+        if not app.config.get("TESTING"):
             app.run(port=_SERVER.port, host=_SERVER.address)
 
     @classmethod
@@ -185,7 +181,11 @@ class Unsafe:
             logging.info("Raw kwargs: %s", raw_kwargs)
             decoded_kwargs = eval(raw_kwargs)
             logging.info("Decoded kwargs: %s", decoded_kwargs)
-            return decoded_kwargs
+            match decoded_kwargs:
+                case builtins.dict():
+                    return decoded_kwargs
+                case _:
+                    return {"__last__": decoded_kwargs}
         except Exception as e:
             raise ValueError(f"Failed to decode kwargs: {e}")
 
@@ -193,12 +193,22 @@ class Unsafe:
         return json.dumps(self.__dict__)
 
     @classmethod
+    def from_dict(cls, json_dict: dict[str, Any]) -> "Unsafe":
+        return cls(
+            code_b64=json_dict["code_b64"],
+            kwargs_b64=json_dict.get("kwargs_b64"),
+            fn_name=json_dict.get("fn_name", "run"),
+            use_cache=json_dict.get("use_cache", False),
+            cache_kwargs=json_dict.get("cache_kwargs", False),
+            cache_key_override=json_dict.get("cache_key_override"),
+        )
+
+    @classmethod
     def from_json(cls, json_str: str) -> "Unsafe":
         try:
             json_dict = json.loads(json_str)
-            logging.info("Got Unsafe JSON: %s", json_dict)
-            unsafe = cls(**json_dict)
-            logging.info(f"Unsafe parsed from JSON POST data: {unsafe.code}")
+            unsafe = cls.from_dict(json_dict)
+            logging.info("Unsafe parsed from JSON POST data: %s", unsafe.code)
             return unsafe
         except Exception as e:
             raise ValueError(f"Failed to parse Unsafe from JSON: {e}")
@@ -225,7 +235,7 @@ class Unsafe:
                 params[key] = value
             logging.debug("Decoded code:")
             logging.debug(base64.b64decode(params["code_b64"]))
-            unsafe = Unsafe(**params)
+            unsafe = cls.from_dict(params)
             logging.info(
                 "Unsafe parsed from GET params: \n\n%s", unsafe.code_indented(4)
             )
@@ -261,18 +271,30 @@ class Unsafe:
             logging.info("Running with kwargs: %s", self.kwargs)
             return self.unsafe_exec_fn()(**self.kwargs)
         except Exception as e:
+            logging.error(f"Error executing Unsafe code: {e}")
             raise RuntimeError(f"Error executing Unsafe code: {e}")
 
 
 @app.route("/<path:path>", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
 @auth.login_required
-def unsafe_exec(path: str | None = None) -> Any:
-    return _run_unsafe_exec(path, request)
+def unsafe_exec(path: str | None) -> Any:
+    del path
+    result = _run_unsafe_exec(request)
+    if result is None:
+        return "", 200
+    match result:
+        case Response():
+            return result
+        case str():
+            return make_response(result)
+        case bytes():
+            return make_response(result)
+        case _:
+            return make_response(json.dumps(result))
 
 
-def _run_unsafe_exec(maybe_path: str | None, request: Request) -> Any:
-    path = maybe_path or "/"
+def _run_unsafe_exec(request: Request) -> Any:
     try:
         unsafe = Unsafe.from_request(request)
     except Exception as e:
@@ -284,12 +306,12 @@ def _run_unsafe_exec(maybe_path: str | None, request: Request) -> Any:
             case (cache_key_override, _):
                 cache_key = cache_key_override
             case (None, False):
-                cache_key = CacheKey(path=path)
+                cache_key = CacheKey(path=request.path)
             case (None, True):
-                cache_key = CacheKey(path=path, kwargs_b64=unsafe.kwargs_b64)
+                cache_key = CacheKey(path=request.path, kwargs_b64=unsafe.kwargs_b64)
         logging.info(
             "Using cache for endpoint %s with key: %s",
-            path,
+            request.path,
             cache_key,
         )
 
@@ -309,8 +331,13 @@ def _run_unsafe_exec(maybe_path: str | None, request: Request) -> Any:
         return f"Error executing Unsafe code: {e}", 500
 
 
+def main(argv=None):
+    try:
+        args = parser.parse_args(argv)
+    except argparse.ArgumentError as e:
+        logging.error(f"Error parsing arguments: {e}")
+        sys.exit(1)
 
-def main():
     Server.serve(
         address=args.address,
         port=args.port,
@@ -319,4 +346,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))

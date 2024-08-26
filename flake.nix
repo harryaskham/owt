@@ -12,10 +12,20 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in with pkgs; {
         devShells = {
-          default = callPackage ./shell.nix { };
+          default = callPackage ./shell.nix { inherit pkgs; };
         };
-        packages = {
-          default = callPackage ./default.nix { };
+        overlays = [
+          (final: prev: {
+            python3 = prev.python3.override {
+              packageOverrides = self: super: super // { owt = final.owt-lib; };
+            };
+            python3Packages = final.python3.pkgs;
+          })
+        ];
+        packages = rec {
+          owt-lib = callPackage ./default.nix { };
+          owt = python3Packages.toPythonApplication owt-lib;
+          default = owt;
         };
       });
 }
