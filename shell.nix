@@ -28,6 +28,5 @@ in
       pip install -r requirements.dev.txt
       yes | mypy --install-types
       python -c "import nltk; nltk.download('punkt')"
-      tmux
     '';
   }
