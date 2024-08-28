@@ -1,4 +1,5 @@
 mypy
 ruff
-ruff-lsp
+python-lsp-server
+pylsp-mypy
 pytest

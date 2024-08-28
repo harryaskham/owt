@@ -1,23 +1,21 @@
 import argparse
-import base64
+import types
+import sys
 import builtins
+import base64
 import dataclasses
 import hashlib
 import json
 import logging
 import os
-import sys
-import types
 from dataclasses import dataclass
 from logging.config import dictConfig
 from typing import Any, Callable, Optional
-
-from flask import Flask, Request, Response, make_response, request
-from flask_cors import CORS
-from flask_httpauth import HTTPBasicAuth
-
 from owt.summat import adaptor
 from owt.summat.syntax import pipe
+from flask import Flask, Response, request, Request, make_response
+from flask_cors import CORS
+from flask_httpauth import HTTPBasicAuth
 
 pipe = pipe
 
