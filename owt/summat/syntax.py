@@ -1,5 +1,5 @@
 from typing import Unpack, Callable, Sequence, Hashable, Any
-from owt.summat.adaptor import Args, Adaptor, Out, Nullary
+from owt.summat.adaptor import In, Adaptor, Out, Nullary
 from owt.summat.functional import (
     F,
     Exec,
@@ -25,7 +25,7 @@ import dataclasses
 
 
 @dataclasses.dataclass
-class Owt[T: Args, U](Adaptor[T, U]):
+class Owt[T, U](Adaptor[T, U]):
     kwargs_cls: type[T]
     pipeline: list[Adaptor]
     input_kwargs: Unpack[T] | None = None
@@ -115,5 +115,5 @@ class Owt[T: Args, U](Adaptor[T, U]):
         return out, {}
 
 
-def pipe[T: Args](kwargs_cls: type[T] = Args) -> Owt[T, T]:
+def pipe[T](kwargs_cls: type[In[T]] = In) -> Owt[T, T]:
     return Owt.builder(kwargs_cls)

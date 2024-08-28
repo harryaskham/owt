@@ -1,8 +1,6 @@
-from typing import Any, Protocol, TypedDict
+import abc
+from typing import TypedDict, Protocol
 
-
-class Args(TypedDict):
-    __last__: Any
 
 class In[T](TypedDict):
     __last__: T
@@ -16,12 +14,12 @@ class Special: ...
 
 class Nullary(Special): ...
 
-
 class RunFn[T, U](Protocol):
-    def __call__(**kwargs: In[T]) -> U: ...
+    def __call__(self, **kwargs: In[T]) -> U: ...
 
 
-class Adaptor[T, U](Protocol):
+class Adaptor[T, U](abc.ABC):
+    @abc.abstractmethod
     def __call__(self, **kwargs: In[T]) -> Out[U]: ...
 
     def done(self) -> RunFn[T, U]:

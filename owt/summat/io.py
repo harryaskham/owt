@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Args, Adaptor, Out, Nullary
+from owt.summat.adaptor import In, Adaptor, Out, Nullary
 from owt.summat.functional import Const
 from typing import Text, Unpack, Sequence, Any, Callable
 import logging
@@ -11,13 +11,13 @@ from flask import request
 import json
 
 
-class Input[T](Adaptor[Any, T]):
+class Input[T](Adaptor[Any, Nullary]):
     """Re-seed the pipeline with the initial input kwargs."""
 
     def __init__(self, get_input: Callable[[], T]) -> None:
         self.get_input = get_input
 
-    def __call__(self, **_: Unpack[Args]) -> Out[T]:
+    def __call__(self, **_: Any) -> Out[T]:
         return Nullary(), self.get_input()
 
 

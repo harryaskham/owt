@@ -2,7 +2,7 @@ from owt.summat.adaptor import Adaptor, Out, In
 
 import copy
 import logging
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, Unpack
 
 
 class F[T, U](Adaptor[T, U]):
@@ -13,7 +13,8 @@ class F[T, U](Adaptor[T, U]):
         try:
             # Only one arg means simply unary application
             if list(kwargs.keys()) == ["__last__"]:
-                return self.f(kwargs["__last__"]), {}
+                out: U = self.f(kwargs["__last__"])
+                return out, {"__last__": out}
         except Exception:
             logging.debug("Failed to apply unary function")
 

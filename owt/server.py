@@ -278,7 +278,7 @@ type ValidResponse = str | bytes | Response | types.GeneratorType | tuple[str, i
 
 def coerce_response(result: Any) -> ValidResponse:
     if result is None:
-        return "", 200
+        return make_response("")
     match result:
         case Response():
             return result
@@ -288,6 +288,8 @@ def coerce_response(result: Any) -> ValidResponse:
             return make_response(result)
         case types.GeneratorType():
             return result
+        case adaptor.Nullary():
+            return make_response("")
         case _:
             logging.warning("Result of exec being coerced via jsom.dumps")
             return make_response(json.dumps(result))
