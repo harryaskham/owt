@@ -1,16 +1,15 @@
-from owt.summat.adaptor import Args, Adaptor, Out
+from owt.summat.adaptor import Args, Adaptor, Out, In
 
 import copy
 import logging
 from typing import Any, Callable, Unpack, Sequence
 
 
-class F[T: Args, U, Last](Adaptor[T, U]):
-    def __init__(self, f: Callable[[Unpack[T]], U] | Callable[[Last], U]) -> None:
+class F[T: Args, U](Adaptor[T, U]):
+    def __init__(self, f: Callable[[T], U]) -> None:
         self.f = f
 
-    def __call__(self, **kwargs: Unpack[T] | Last) -> Out[U]:
-        logging.debug(kwargs)
+    def __call__(self, **kwargs: T) -> Out[U]:
         try:
             # Only one arg means simply unary application
             if list(kwargs.keys()) == ["__last__"]:
@@ -36,8 +35,8 @@ class F[T: Args, U, Last](Adaptor[T, U]):
             raise
 
 
-class Exec[T: Args, Last](F[T, T, Last]):
-    def __call__(self, **kwargs: Unpack[T] | Last) -> Out[T]:
+class Exec[T](F[T, T]):
+    def __call__(self, **kwargs: In[T]) -> Out[T]:
         super().__call__(**kwargs)
         return kwargs.get("__last__"), kwargs
 
@@ -78,7 +77,7 @@ class Fork[T: Args, U, V](Adaptor[T, tuple[U, V]]):
         return (left, right), {**lkwargs, **rkwargs}
 
 
-class Map[T: Args, U: Sequence, Last: Sequence](F[T, U, Last]):
+class Map[T: Args, U: Sequence](F[T, U]):
     def __init__(self, f: Callable[[Unpack[T]], U]) -> None:
         super().__init__(lambda xs, **kwargs: [f(x, **kwargs) for x in xs])
 

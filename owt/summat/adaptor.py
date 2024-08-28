@@ -1,11 +1,14 @@
-from typing import Any, Protocol, Unpack, TypedDict, Callable
+from typing import Any, Protocol, TypedDict, Callable
 
 
 class Args(TypedDict):
     __last__: Any
 
+class In[T](TypedDict):
+    __last__: T
 
-type Out[T] = tuple[T, Args]
+
+type Out[U] = tuple[U, In[U]]
 
 
 class Special: ...
@@ -14,19 +17,11 @@ class Special: ...
 class Nullary(Special): ...
 
 
+class Adaptor[T, U](Protocol):
+    def __call__(self, **kwargs: T) -> Out[U]: ...
 
-
-
-class Adaptor[T: Args, U](Protocol):
-    def __call__(self, **kwargs: Unpack[T]) -> Out[U]: ...
-
-    def done(self) -> Callable[[Unpack[T]], U]:
-        def _run(**kwargs: Unpack[T]) -> U:
-            result = self(**kwargs)[0]
-            match result:
-                case Nullary():
-                    return None
-                case _:
-                    return result
+    def done(self) -> Callable[[T], U]:
+        def _run(**kwargs: In[T]) -> U:
+            return self(**kwargs)[0]
 
         return _run
