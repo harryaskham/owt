@@ -1,4 +1,4 @@
-from typing import Any, Protocol, TypedDict, Callable, Unpack
+from typing import Any, Protocol, TypedDict
 
 
 class Args(TypedDict):
