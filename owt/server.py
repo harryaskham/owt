@@ -13,12 +13,11 @@ from logging.config import dictConfig
 from typing import Any, Callable, Optional
 from owt.summat import adaptor
 from owt.summat.syntax import pipe
-
-pipe = pipe
-
 from flask import Flask, Response, request, Request, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+
+pipe = pipe
 
 dictConfig(
     {

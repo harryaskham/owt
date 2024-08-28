@@ -1,4 +1,3 @@
-import enum
 from typing import Any, Protocol, Unpack, TypedDict, Callable
 
 
@@ -6,7 +5,7 @@ class Args(TypedDict):
     __last__: Any
 
 
-type Out[T] = Out[T]
+type Out[T] = tuple[T, Args]
 
 
 class Special: ...
@@ -15,7 +14,7 @@ class Special: ...
 class Nullary(Special): ...
 
 
-class Adaptor[T: Args, U](Protocol):
+class Adaptor[T: Args | TypedDict, U](Protocol):
     def __call__(self, **kwargs: Unpack[T]) -> Out[U]: ...
 
     def done(self) -> Callable[[Unpack[T]], U]:
