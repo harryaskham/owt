@@ -286,7 +286,7 @@ def coerce_response(result: Any) -> ValidResponse:
             return make_response(result)
         case bytes():
             return make_response(result)
-        case types.GeneratorType:
+        case types.GeneratorType():
             return result
         case _:
             logging.warning("Result of exec being coerced via jsom.dumps")
