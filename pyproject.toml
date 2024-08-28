@@ -1,0 +1,8 @@
+[tool.mypy]
+enable_incomplete_feature = "NewGenericSyntax"
+packages = "owt"
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
+strict = true
