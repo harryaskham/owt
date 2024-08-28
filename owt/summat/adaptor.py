@@ -14,7 +14,10 @@ class Special: ...
 class Nullary(Special): ...
 
 
-class Adaptor[T: Args | TypedDict, U](Protocol):
+
+
+
+class Adaptor[T: Args, U](Protocol):
     def __call__(self, **kwargs: Unpack[T]) -> Out[U]: ...
 
     def done(self) -> Callable[[Unpack[T]], U]:
