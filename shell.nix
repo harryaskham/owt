@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import <nixpkgs> {}, full }:
 
 let
   pythonPkgs = python-packages: with python-packages; [
@@ -26,8 +26,11 @@ in
       source ./$VENV/bin/activate
       pip install -r requirements.txt
       pip install -r requirements.dev.txt
-      yes | mypy --install-types
+    '' + (if full then ''
+      pip install -r requirements.bark.txt
       python -c "import nltk; nltk.download('punkt')"
+    '' else '''') + ''
+      yes | mypy --install-types
       zsh
     '';
   }

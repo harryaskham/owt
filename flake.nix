@@ -12,7 +12,8 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in with pkgs; {
         devShells = {
-          default = callPackage ./shell.nix { inherit pkgs; };
+          default = callPackage ./shell.nix { inherit pkgs; full = true; };
+          core = callPackage ./shell.nix { inherit pkgs; full = false; };
         };
         overlays = [
           (final: prev: {
