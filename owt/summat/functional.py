@@ -1,40 +1,22 @@
-from owt.summat.adaptor import Adaptor, Out, In
+from owt.summat.adaptor import Adaptor, Out, WithLast
 
 import copy
 import logging
 from typing import Any, Callable, Sequence, Unpack
 
 
-class F[T, U](Adaptor[T, U]):
+class F[T, TK, U, UK](Adaptor[T, TK, U, UK]):
     def __init__(self, f: Callable[[T], U]) -> None:
         self.f = f
 
-    def __call__(self, **kwargs: Unpack[In[T]]) -> Out[U]:
-        try:
-            # Only one arg means simply unary application
-            if list(kwargs.keys()) == ["__last__"]:
-                _in: T = kwargs["__last__"]
-                out: U = self.f(_in)
-                return out, {"__last__": out}
-        except Exception:
-            logging.debug("Failed to apply unary function")
-
-        try:
-            kwargs_without_last = copy.copy(kwargs)
-            if "__last__" in kwargs_without_last:
-                del kwargs_without_last["__last__"]
-
-            # Prefer calling with kwargs
-            return self.f(**kwargs_without_last), {}
-        except Exception:
-            logging.debug("Failed to apply kwargs")
-
-        try:
-            # On failure try a unary call with __last__, discarding other args
-            return self.f(kwargs["__last__"]), {}
-        except Exception:
-            logging.debug("Failed to apply __last__")
-            raise
+    def __call__(self, **kwargs: Unpack[WithLast[T]]) -> Out[U]:
+        match list(kwargs.keys()):
+            case ["__last__"]:
+                _in = kwargs["__last__"]
+                out = self.f(_in)
+            case _:
+                out = self.f(**kwargs)
+        return out, {"__last__": out}
 
 
 class Exec[T](F[T, T]):
