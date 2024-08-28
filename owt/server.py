@@ -274,13 +274,9 @@ class Unsafe:
             logging.error(f"Error executing Unsafe code: {e}")
             raise RuntimeError(f"Error executing Unsafe code: {e}")
 
+type ValidResponse = str | bytes | Response | types.GeneratorType | tuple[str, int]
 
-@app.route("/<path:path>", methods=["GET", "POST"])
-@app.route("/", methods=["GET", "POST"])
-@auth.login_required
-def unsafe_exec(path: str | None) -> Any:
-    del path
-    result = _run_unsafe_exec(request)
+def coerce_response(result: Any) -> ValidResponse:
     if result is None:
         return "", 200
     match result:
@@ -296,6 +292,12 @@ def unsafe_exec(path: str | None) -> Any:
             logging.warning("Result of exec being coerced via jsom.dumps")
             return make_response(json.dumps(result))
 
+@app.route("/<path:path>", methods=["GET", "POST"])
+@auth.login_required
+def unsafe_exec(path: str | None) -> Any:
+    del path
+    result = _run_unsafe_exec(request)
+    return coerce_response(result)
 
 def _run_unsafe_exec(request: Request) -> Any:
     try:
