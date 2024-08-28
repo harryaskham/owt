@@ -1,4 +1,5 @@
 import argparse
+import types
 import sys
 import builtins
 import base64
@@ -290,8 +291,11 @@ def unsafe_exec(path: str | None) -> Any:
             return make_response(result)
         case bytes():
             return make_response(result)
-        case _:
+        case types.GeneratorType:
             return result
+        case _:
+            logging.warning("Result of exec being coerced via jsom.dumps")
+            return make_response(json.dumps(result))
 
 
 def _run_unsafe_exec(request: Request) -> Any:
