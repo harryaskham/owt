@@ -9,11 +9,12 @@ class F[T, U](Adaptor[T, U]):
     def __init__(self, f: Callable[[T], U]) -> None:
         self.f = f
 
-    def __call__(self, **kwargs: In[T]) -> Out[U]:
+    def __call__(self, **kwargs: Unpack[In[T]]) -> Out[U]:
         try:
             # Only one arg means simply unary application
             if list(kwargs.keys()) == ["__last__"]:
-                out: U = self.f(kwargs["__last__"])
+                _in: T = kwargs["__last__"]
+                out: U = self.f(_in)
                 return out, {"__last__": out}
         except Exception:
             logging.debug("Failed to apply unary function")
