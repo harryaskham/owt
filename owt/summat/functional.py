@@ -25,6 +25,7 @@ class Exec[**T, U](Adaptor[T, U]):
         self.f(**kwargs)
         return Passthrough()
 
+
 class Const[U](Adaptor[Any, U]):
     def __init__(self, a: U) -> None:
         self.a = a
@@ -49,6 +50,7 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
             u = self._then.call(**kwargs)
         else:
             u = self._else.call(**kwargs)
+
         def merge(u: CallOut[U] | CallOut[V]) -> CallOut[U | V]:
             match u:
                 case Passthrough():
@@ -59,6 +61,7 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
                     return DropKWs(value)
                 case SetKWs(value, kwargs):
                     return SetKWs(value, kwargs)
+
         return merge(u)
 
 

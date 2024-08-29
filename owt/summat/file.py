@@ -5,7 +5,6 @@ import io
 
 
 class LoadFile(F[[Any], io.BytesIO]):
-
     def __init__(self, root_dir: str | None = None) -> None:
         # If a root directory is set, it cannot be overridden by a kwarg.
         self.root_dir = root_dir

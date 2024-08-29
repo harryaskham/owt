@@ -38,7 +38,8 @@ class Owt[**T, U](Adaptor[T, U]):
         return Owt(
             pipeline=self.pipeline + [adaptor],
             kwargs_cls=self.kwargs_cls,
-            input_kwargs=self.input_kwargs)
+            input_kwargs=self.input_kwargs,
+        )
 
     def open(self, root_dir: str | None = None) -> "Owt[T, io.BytesIO]":
         return self.to(LoadFile(root_dir))
@@ -73,6 +74,7 @@ class Owt[**T, U](Adaptor[T, U]):
                 return xs[-1]
             else:
                 raise TypeError(f"Expected a sequence for last(), got {type(xs)}")
+
         return self.f(f)
 
     def f[V](self, f: Callable[[U], V]) -> "Owt[T, V]":
@@ -87,7 +89,9 @@ class Owt[**T, U](Adaptor[T, U]):
     def identity(self) -> "Owt[T, U]":
         return self.to(Identity())
 
-    def cond[V, W](self, _then: Adaptor[[U], W | V], _else: Adaptor[[U], V | W]) -> "Owt[T, V | W]":
+    def cond[V, W](
+        self, _then: Adaptor[[U], W | V], _else: Adaptor[[U], V | W]
+    ) -> "Owt[T, V | W]":
         return self.to(Cond(_then, _else))
 
     def fork[V, W](
@@ -98,12 +102,10 @@ class Owt[**T, U](Adaptor[T, U]):
     def cast[V](self, cst: Callable[[U], V]) -> "Owt[T, V]":
         return self.f(cst)
 
-    def map[V](
-        self, f: Callable[[Any], V]
-    ) -> "Owt[T, Sequence[V]]":
-        return (self
-                .cast(lambda u: isinstance(u, list) and u or [])
-                .f(lambda xs: [f(x) for x in xs]))
+    def map[V](self, f: Callable[[Any], V]) -> "Owt[T, Sequence[V]]":
+        return self.cast(lambda u: isinstance(u, list) and u or []).f(
+            lambda xs: [f(x) for x in xs]
+        )
 
     def foldl[V](self, f: Callable[[V, U], V], acc: U) -> "Owt[T, V]":
         def go(xs):
@@ -111,9 +113,8 @@ class Owt[**T, U](Adaptor[T, U]):
             for x in xs:
                 _acc = f(_acc, x)
             return _acc
-        return (self
-                .cast(lambda u: isinstance(u, list) and u or [])
-                .f(go))
+
+        return self.cast(lambda u: isinstance(u, list) and u or []).f(go)
 
     def foldl1[V](self, f: Callable[[V, V], V]) -> "Owt[T, V]":
         def go(xs):
@@ -121,19 +122,16 @@ class Owt[**T, U](Adaptor[T, U]):
             for x in xs:
                 _acc = f(_acc, x)
             return _acc
-        return (self
-                .cast(lambda u: isinstance(u, list) and u or [])
-                .f(go))
+
+        return self.cast(lambda u: isinstance(u, list) and u or []).f(go)
 
     def ix[V](self, i: int) -> "Owt[T, V]":
-        return (self
-                .cast(lambda u: isinstance(u, list) and u or [])
-                .f(lambda xs: xs[i]))
+        return self.cast(lambda u: isinstance(u, list) and u or []).f(lambda xs: xs[i])
 
     def get[V](self, key: Hashable) -> "Owt[T, V]":
-        return (self
-                .cast(lambda u: isinstance(u, dict) and u or {})
-                .f(lambda xs: xs[key]))
+        return self.cast(lambda u: isinstance(u, dict) and u or {}).f(
+            lambda xs: xs[key]
+        )
 
     def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         self.input_kwargs = kwargs

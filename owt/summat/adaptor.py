@@ -9,16 +9,18 @@ class Special: ...
 class Nullary(Special): ...
 
 
-
 class Passthrough(Special): ...
+
 
 @dataclasses.dataclass(frozen=True)
 class KeepKWs[U](Special):
     u: U
 
+
 @dataclasses.dataclass(frozen=True)
 class DropKWs[U](Special):
     u: U
+
 
 @dataclasses.dataclass(frozen=True)
 class SetKWs[U, KW](Special):
@@ -27,6 +29,7 @@ class SetKWs[U, KW](Special):
 
 
 type CallOut[U] = KeepKWs[U] | DropKWs[U] | SetKWs[U, Any] | Passthrough
+
 
 def getU[U](_u: CallOut[U]) -> U | Passthrough:
     match _u:
@@ -39,9 +42,9 @@ def getU[U](_u: CallOut[U]) -> U | Passthrough:
         case Passthrough():
             return Passthrough()
 
+
 type OutKW[**T, U] = tuple[U, T.kwargs]
 type Out[**T, U] = OutKW[T, U] | OutKW[[], U] | OutKW[Concatenate[U, T], U]
-
 
 
 class Adaptor[**T, U](abc.ABC):
