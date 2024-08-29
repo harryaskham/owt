@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs
+from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs, PassKWs
 from owt.summat.functional import Const, Exec
 from typing import Any, Callable
 import subprocess
@@ -52,7 +52,7 @@ class NameOutput[**T, U](Adaptor[T, U]):
     def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         new_kwargs = copy.copy(kwargs)
         new_kwargs[self.name] = new_kwargs["__last__"]
-        return SetKWs(new_kwargs["__last__"], new_kwargs)
+        return PassKWs(new_kwargs)
 
 
 class Kwargs[**T, U](Adaptor[T, U]):
@@ -61,10 +61,10 @@ class Kwargs[**T, U](Adaptor[T, U]):
     def __init__(self, **kwargs: T.kwargs) -> None:
         self.kwargs = kwargs
 
-    def call(self, *, __last__, **bindings: T.kwargs) -> CallOut[U]:
+    def call(self, **bindings: T.kwargs) -> CallOut[U]:
         new_kwargs = copy.copy(self.kwargs)
         new_kwargs.update(bindings)
-        return SetKWs(__last__, new_kwargs)
+        return PassKWs(new_kwargs)
 
 
 class Import[**T, U](Exec[T, U]):

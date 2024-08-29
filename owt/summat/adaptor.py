@@ -27,38 +27,40 @@ class SetKWs[U, KW](Special):
     u: U
     kwargs: KW
 
+@dataclasses.dataclass(frozen=True)
+class PassKWs[KW](Special):
+    kwargs: KW
 
-type CallOut[U] = KeepKWs[U] | DropKWs[U] | SetKWs[U, Any] | Passthrough
 
-
-def getU[U](_u: CallOut[U]) -> U | Passthrough:
-    match _u:
-        case KeepKWs(u):
-            return u
-        case DropKWs(u):
-            return u
-        case SetKWs(u, _):
-            return u
-        case Passthrough():
-            return Passthrough()
+type CallOut[U] = KeepKWs[U] | DropKWs[U] | SetKWs[U, Any] | PassKWs[Any] | Passthrough
 
 
 type OutKW[**T, U] = tuple[U, T.kwargs]
-type Out[**T, U] = OutKW[T, U] | OutKW[[], U] | OutKW[Concatenate[U, T], U]
+type Out[**T, U] = OutKW[T, U] | OutKW[[], U] | OutKW[Concatenate[U, T], U] | OutKW[T, Nullary]
 
 
 class Adaptor[**T, U](abc.ABC):
     def __call__(self, **kwargs: T.kwargs) -> Out[T, U]:
         match self.call(**kwargs):
             case Passthrough():
-                return kwargs["__last__"], kwargs
+                match kwargs.get("__last__"):
+                    case None:
+                        return Nullary(), kwargs
+                    case u:
+                        return u, kwargs
+            case PassKWs(kws):
+                match kwargs.get("__last__"):
+                    case None:
+                        return Nullary(), kws
+                    case u:
+                        return u, kws
             case KeepKWs(u):
                 kwargs["__last__"] = u
                 return u, kwargs
             case DropKWs(u):
                 return u, {"__last__": u}
             case SetKWs(u, kws):
-                kws.__last__ = u
+                kws["__last__"] = u
                 return u, kws
             case u:
                 raise ValueError(f"Invalid call() CallOut: {u}")

@@ -5,7 +5,7 @@ run:
 	python -m owt.server
 
 mypy:
-	mypy --enable-incomplete-feature=NewGenericSyntax -m owt
+	mypy
 
 lint:
 	ruff check

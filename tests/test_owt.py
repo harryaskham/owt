@@ -306,7 +306,7 @@ def test_data_source(client: FlaskClient):
         method="POST",
         extra_params={"extra": "test data"},
         code="""
-run = pipe().data().get("extra").done()
+run = pipe().json().get("extra").done()
         """,
     )
 

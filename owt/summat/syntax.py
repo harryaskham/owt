@@ -139,8 +139,7 @@ class Owt[**T, U](Adaptor[T, U]):
         for adaptor in self.pipeline:
             out, out_kwargs = adaptor(**run_kwargs)
             run_kwargs = self.kwargs_cls(**out_kwargs)
-            if not isinstance(out, Nullary):
-                run_kwargs["__last__"] = out
+            run_kwargs["__last__"] = out
         return DropKWs(out)
 
 

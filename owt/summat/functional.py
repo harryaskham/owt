@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
+from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough, PassKWs
 
 from typing import Any, Callable
 
@@ -61,6 +61,8 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
                     return DropKWs(value)
                 case SetKWs(value, kwargs):
                     return SetKWs(value, kwargs)
+                case PassKWs(kwargs):
+                    return PassKWs(kwargs)
 
         return merge(u)
 
