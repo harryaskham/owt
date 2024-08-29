@@ -96,7 +96,7 @@ class Owt[**T, U](Adaptor[T, U]):
 
     def fork[V, W](
         self, left: Adaptor[[U], V], right: Adaptor[[U], W]
-    ) -> "Owt[T, tuple[V, W]]":
+    ) -> "Owt[T, tuple[V | Nullary, W | Nullary]]":
         return self.to(Fork(left, right))
 
     def cast[V](self, cst: Callable[[U], V]) -> "Owt[T, V]":
@@ -140,7 +140,11 @@ class Owt[**T, U](Adaptor[T, U]):
             out, out_kwargs = adaptor(**run_kwargs)
             run_kwargs = self.kwargs_cls(**out_kwargs)
             run_kwargs["__last__"] = out
-        return DropKWs(out)
+        match out:
+            case Nullary():
+                raise ValueError("Run cannot return Nullary")
+            case _:
+                return DropKWs(out)
 
 
 def pipe[**T](kwargs_cls: type[T.kwargs] = dict) -> Owt[T, T.kwargs]:

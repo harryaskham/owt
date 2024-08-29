@@ -72,7 +72,7 @@ class Import[**T, U](Exec[T, U]):
 
     def __init__(self, *modules) -> None:
         def f(*args, **kwargs):
-            for module in self.modules:
+            for module in modules:
                 importlib.import_module(module)
 
         super().__init__(f)

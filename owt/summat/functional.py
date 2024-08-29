@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough, PassKWs
+from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough, PassKWs, Nullary
 
 from typing import Any, Callable
 
@@ -13,7 +13,11 @@ class F[**T, U](Adaptor[T, U]):
                 _in = kwargs["__last__"]
                 out = self.f(_in)
             case _:
-                out = self.f(**kwargs)
+                try:
+                    out = self.f(**kwargs)
+                except Exception:
+                    del kwargs["__last__"]
+                    out = self.f(**kwargs)
         return DropKWs(out)
 
 
@@ -21,7 +25,7 @@ class Exec[**T, U](Adaptor[T, U]):
     def __init__(self, f: Callable[T, Any]) -> None:
         self.f = f
 
-    def call(self, *, __last__, **kwargs: T.kwargs) -> CallOut[U]:
+    def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         self.f(**kwargs)
         return Passthrough()
 
@@ -67,12 +71,12 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
         return merge(u)
 
 
-class Fork[**T, U, V](Adaptor[T, tuple[U, V]]):
+class Fork[**T, U, V](Adaptor[T, tuple[U | Nullary, V | Nullary]]):
     def __init__(self, left: Adaptor[T, U], right: Adaptor[T, V]) -> None:
         self.left = left
         self.right = right
 
-    def call(self, **kwargs: T.kwargs) -> CallOut[tuple[U, V]]:
+    def call(self, **kwargs: T.kwargs) -> CallOut[tuple[U | Nullary, V | Nullary]]:
         lu, lkws = self.left(**kwargs)
         ru, rkws = self.right(**kwargs)
         return DropKWs((lu, ru))

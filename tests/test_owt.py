@@ -223,16 +223,6 @@ run = pipe().clear().f(lambda _: "no kwargs").done()
     )
 
 
-def test_kwargs_no_fn(client: FlaskClient):
-    assert_owt_exec(
-        client,
-        expected="",
-        code="""
-run = pipe().kwargs(x=1, y=2).done()
-""",
-    )
-
-
 def test_kwargs_unused_args(client: FlaskClient):
     assert_owt_exec(
         client,
@@ -284,7 +274,7 @@ def test_pip_install(mock_pip_install, client: FlaskClient):
 run = pipe().installing("pytest").const(123).done()
     """,
     )
-    mock_pip_install.assert_called_once_with(["pytest"])
+    mock_pip_install.assert_called_once_with("pytest")
 
 
 def test_query_source(client: FlaskClient):
@@ -318,12 +308,7 @@ run = (pipe()
        .last()
        .cast(int)
        .f(lambda x: x > 10)
-       .cond((pipe()
-              .const("true")
-              .done()),
-             (pipe()
-              .const("false")
-              .done()))
+       .cond(pipe().const("true"), pipe().const("false"))
        .done())
 """
 

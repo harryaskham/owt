@@ -70,6 +70,11 @@ class Adaptor[**T, U](abc.ABC):
 
     def done(self) -> Callable[T, U]:
         def _run(*args, **kwargs: T.kwargs) -> U:
-            return self.__call__(**kwargs)[0]
+            u = self.__call__(**kwargs)[0]
+            match u:
+                case Nullary():
+                    raise ValueError("Run cannot return Nullary")
+                case _:
+                    return u
 
         return _run
