@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, Out, L, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
+from owt.summat.adaptor import LTD, Adaptor, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
 
 from typing import Any, Callable, Sequence, Unpack
 
@@ -42,30 +42,44 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
         self._else = _else
 
     def call(self, **kwargs: T.kwargs) -> CallOut[U | V]:
+        u: CallOut[U] | CallOut[V]
         if kwargs["__last__"]:
             u = self._then.call(**kwargs)
         else:
             u = self._else.call(**kwargs)
-        match u:
-            case Passthrough():
-                return Passthrough()
-            case
+        def merge(u: CallOut[U] | CallOut[V]) -> CallOut[U | V]:
+            match u:
+                case Passthrough():
+                    return Passthrough()
+                case KeepKWs(value):
+                    return KeepKWs(value)
+                case DropKWs(value):
+                    return DropKWs(value)
+                case SetKWs(value, kwargs):
+                    return SetKWs(value, kwargs)
+        return merge(u)
 
 
-class Fork[T, U, V](Adaptor[T, tuple[U, V]]):
+class Fork[**T, U, V](Adaptor[T, tuple[U, V]]):
     def __init__(self, left: Adaptor[T, U], right: Adaptor[T, V]) -> None:
         self.left = left
         self.right = right
 
-    def call(self, **kwargs: HasLast[T]) -> CallOut[tuple[U, V]]:
-        left_result = self.left.call(**kwargs)
-        right_result = self.right.call(**kwargs)
-        return SetKWs((left_result.value, right_result.value), {**left_result.kwargs, **right_result.kwargs})
+    def call(self, **kwargs: T.kwargs) -> CallOut[tuple[U, V]]:
+        lu, lkws = self.left(**kwargs)
+        ru, rkws = self.right(**kwargs)
+        return DropKWs((lu, ru))
 
 
-class Map[T, U](F[Sequence[T], Sequence[U]]):
+class Map[T, U](Adaptor[HasLast[Sequence[T]], Sequence[U]]):
     def __init__(self, f: Callable[[T], U]) -> None:
-        super().__init__(lambda xs, **kwargs: [f(x, **kwargs) for x in xs])
+        self.f = f
+
+    def call(self, **kwargs: HasLast[Sequence[T]]) -> CallOut[Sequence[U]]:
+        def getLast[L](__last__: L, **_) -> L:
+            return __last__
+        xs: Sequence[T] = getLast(**kwargs)
+        return DropKWs([self.f(x) for x in xs])
 
 
 class Foldl[T, U, V](Adaptor[T, V]):
