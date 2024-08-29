@@ -1,7 +1,6 @@
 from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs, HasLast
-from owt.summat.functional import Const
-from typing import Text, Unpack, Sequence, Any, Callable
-import logging
+from owt.summat.functional import Const, Exec
+from typing import Any, Callable
 import subprocess
 import sys
 import io
@@ -22,7 +21,7 @@ class Input[T](Adaptor[Any, T]):
         return SetKWs(u, u)
 
 
-class DataSource(Const[dict[str, Any]]):
+class JSONDataSource(Const[Any]):
     def __init__(self) -> None:
         super().__init__(json.loads(request.data))
 
@@ -53,45 +52,36 @@ class NameOutput[T](Adaptor[HasLast[T], T]):
 
     def call(self, *, __last__: T,  **kwargs) -> CallOut[T]:
         new_kwargs = copy.copy(kwargs)
-        new_kwargs[self.name] = new_kwargs["__last__"]
-        return new_kwargs["__last__"], new_kwargs
+        new_kwargs[self.name] = __last__
+        return SetKWs(__last__,  new_kwargs)
 
 
-class Kwargs[K, U](Adaptor[K, U]):
+class Kwargs[**T, U](Adaptor[T, U]):
     """Define a set of default kwargs."""
 
-    def __init__(self, **kwargs: K) -> None:
+    def __init__(self, **kwargs: T.kwargs) -> None:
         self.kwargs = kwargs
 
-    def __call__(self, **bindings: Unpack[K]) -> Out[K]:
+    def call(self, *, __last__, **bindings: T.kwargs) -> CallOut[U]:
         new_kwargs = copy.copy(self.kwargs)
         new_kwargs.update(bindings)
-        logging.debug("%s, %s, %s", bindings, self.kwargs, new_kwargs)
-        return new_kwargs.get("__last__"), new_kwargs
+        return SetKWs(__last__, new_kwargs)
 
 
-class Import[T](Adaptor[T, T]):
+class Import[**T, U](Exec[T, U]):
     """Imports available to the rest of the pipeline."""
 
     def __init__(self, *modules) -> None:
-        self.modules = modules
-
-    def __call__(self, **kwargs: Unpack[T]) -> Out[T]:
-        for module in self.modules:
-            importlib.import_module(module)
-        return kwargs.get("__last__"), kwargs
+        def f(*args, **kwargs):
+            for module in self.modules:
+                importlib.import_module(module)
+        super().__init__(f)
 
 
-class Install[T](Adaptor[T, T]):
+class Install[**T, U](Exec[T, U]):
     """Installs via pip."""
 
     def __init__(self, *packages) -> None:
-        self.packages = list(packages)
-
-    @classmethod
-    def pip_install(cls, packages: Sequence[str]) -> None:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
-
-    def __call__(self, **kwargs: Unpack[T]) -> Out[T]:
-        Install.pip_install(self.packages)
-        return kwargs.get("__last__"), kwargs
+        def f(*args, **kwargs):
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
+        super().__init__(f)

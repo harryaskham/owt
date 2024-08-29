@@ -204,9 +204,9 @@ class Unsafe:
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> "Unsafe":
+    def from_json(cls, data: bytes) -> "Unsafe":
         try:
-            json_dict = json.loads(json_str)
+            json_dict = json.loads(data)
             unsafe = cls.from_dict(json_dict)
             logging.info("Unsafe parsed from JSON POST data: %s", unsafe.code)
             return unsafe
@@ -223,7 +223,7 @@ class Unsafe:
             return unsafe
         except Exception as e:
             logging.error(e)
-            logging.debug(f"POST data: {request.data}")
+            logging.debug(f"POST data: {request.data!r}")
             logging.error(
                 "Failed to parse Unsafe from JSON POST data, trying GET params"
             )
@@ -251,7 +251,7 @@ class Unsafe:
     def code_indented(self, indent: int) -> str:
         return "\n".join(self.lines(indent=indent))
 
-    def unsafe_exec_fn(self) -> Callable[[adaptor.Adaptor], Response]:
+    def unsafe_exec_fn[**T](self) -> Callable[T, Any]:
         _globals = globals()
         _locals = locals()
         logging.info("Running code:\n\n%s", self.code_indented(4))
@@ -296,7 +296,7 @@ def coerce_response(result: Any) -> ValidResponse:
 
 @app.route("/<path:path>", methods=["GET", "POST"])
 @auth.login_required
-def unsafe_exec(path: str | None) -> Any:
+def unsafe_exec(path: str | None) -> ValidResponse:
     del path
     result = _run_unsafe_exec(request)
     return coerce_response(result)
