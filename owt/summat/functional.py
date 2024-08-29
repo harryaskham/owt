@@ -17,7 +17,7 @@ class F[**T, U](Adaptor[T, U]):
         return DropKWs(out)
 
 
-class Exec[T](F[HasLast[T], T]):
+class Exec[T](Adaptor[HasLast[T], T]):
     def call(self, **kwargs: HasLast[T]) -> CallOut[T]:
         super().__call__(**kwargs)
         return Passthrough()
@@ -41,11 +41,15 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
         self._then = _then
         self._else = _else
 
-    def call(self, **kwargs: T.kwargs) -> CallOut[U] | CallOut[V]:
+    def call(self, **kwargs: T.kwargs) -> CallOut[U | V]:
         if kwargs["__last__"]:
-            return self._then.call(**kwargs)
+            u = self._then.call(**kwargs)
         else:
-            return self._else.call(**kwargs)
+            u = self._else.call(**kwargs)
+        match u:
+            case Passthrough():
+                return Passthrough()
+            case
 
 
 class Fork[T, U, V](Adaptor[T, tuple[U, V]]):
