@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, Out, L
+from owt.summat.adaptor import Adaptor, Out, L, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
 
 from typing import Any, Callable, Sequence
 
@@ -7,28 +7,28 @@ class F[**T, U](Adaptor[T, U]):
     def __init__(self, f: Callable[T, U]) -> None:
         self.f = f
 
-    def __call__(self, **kwargs: T.kwargs) -> Out[T, U]:
+    def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         match list(kwargs.keys()):
             case ["__last__"]:
                 _in = kwargs["__last__"]
                 out = self.f(_in)
             case _:
                 out = self.f(**kwargs)
-        return out, L({"__last__": out})
+        return DropKWs(out)
 
 
-class Exec[T](F[T, T]):
-    def __call__(self, **kwargs: In[T]) -> Out[T]:
+class Exec[T](F[HasLast[T], T]):
+    def call(self, **kwargs: HasLast[T]) -> CallOut[T]:
         super().__call__(**kwargs)
-        return kwargs.get("__last__"), kwargs
+        return Passthrough()
 
 
-class Const[T](Adaptor[Any, T]):
-    def __init__(self, a: T) -> None:
+class Const[U](Adaptor[Any, U]):
+    def __init__(self, a: U) -> None:
         self.a = a
 
-    def __call__(self, **_: Any) -> Out[T]:
-        return self.a, {"__last__": self.a}
+    def call(self, **_: Any) -> CallOut[T]:
+        return DropKWs(self.a)
 
 
 class Identity[T](Adaptor[T, T]):
