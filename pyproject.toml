@@ -1,3 +1,7 @@
+[project]
+name = "owt"
+version = "0.0.1"
+
 [tool.mypy]
 enable_incomplete_feature = "NewGenericSyntax"
 packages = "owt"

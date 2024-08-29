@@ -33,8 +33,7 @@ class QuerySource(Const[dict[str, str]]):
 
 class PathSource(Const[list[str]]):
     def __init__(self) -> None:
-        segments = request.path.strip("/").split("/")
-        super().__init__(segments)
+        super().__init__(request.path.strip("/").split("/"))
 
 
 class BufferSink(Adaptor[[io.BytesIO], bytes]):
