@@ -6,6 +6,7 @@
 Serve up owt yer fancy on t'fly.
 
 [[https://github.com/harryaskham/owt/actions/workflows/test.yml][https://github.com/harryaskham/owt/actions/workflows/test.yml/badge.svg]]
+[[https://github.com/harryaskham/owt/actions/workflows/test_nix.yml][https://github.com/harryaskham/owt/actions/workflows/test_nix.yml/badge.svg]]
 ** tl;dr
 
 
