@@ -1,6 +1,6 @@
-from owt.summat.adaptor import Adaptor, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
+from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
 
-from typing import Any, Callable, Sequence
+from typing import Any, Callable
 
 
 class F[**T, U](Adaptor[T, U]):

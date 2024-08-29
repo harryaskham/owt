@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs, HasLast
+from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs
 from owt.summat.functional import Const, Exec
 from typing import Any, Callable
 import subprocess
@@ -44,16 +44,16 @@ class BufferSink(Adaptor[[io.BytesIO], bytes]):
         return DropKWs(__last__.getvalue())
 
 
-class NameOutput[T](Adaptor[HasLast[T], T]):
+class NameOutput[**T, U](Adaptor[T, U]):
     """Give a kwarg name to the last value output."""
 
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def call(self, *, __last__: T,  **kwargs) -> CallOut[T]:
+    def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         new_kwargs = copy.copy(kwargs)
-        new_kwargs[self.name] = __last__
-        return SetKWs(__last__,  new_kwargs)
+        new_kwargs[self.name] = new_kwargs["__last__"]
+        return SetKWs(new_kwargs["__last__"],  new_kwargs)
 
 
 class Kwargs[**T, U](Adaptor[T, U]):
@@ -81,7 +81,11 @@ class Import[**T, U](Exec[T, U]):
 class Install[**T, U](Exec[T, U]):
     """Installs via pip."""
 
+    @classmethod
+    def pip_install(*packages: str) -> None:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
+
     def __init__(self, *packages) -> None:
         def f(*args, **kwargs):
-            subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
+            Install.pip_install(*packages)
         super().__init__(f)

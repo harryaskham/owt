@@ -1,17 +1,12 @@
 import abc
 import dataclasses
-from typing import Callable, Concatenate, TypedDict, Any
+from typing import Callable, Concatenate, Any
 
 
 class Special: ...
 
 
 class Nullary(Special): ...
-
-class LTD[U](TypedDict):
-    __last__: U
-
-
 
 
 
@@ -45,27 +40,21 @@ def getU[U](_u: CallOut[U]) -> U | Passthrough:
             return Passthrough()
 
 type OutKW[**T, U] = tuple[U, T.kwargs]
-type Out[**T, U] = OutKW[T, U] | OutKW[[], U] | OutKW[Concatenate[LTD[U], ...], U]
-type HasLast[T] = Concatenate[LTD[T], ...]
+type Out[**T, U] = OutKW[T, U] | OutKW[[], U] | OutKW[Concatenate[U, T], U]
 
 
 
 class Adaptor[**T, U](abc.ABC):
     def __call__(self, **kwargs: T.kwargs) -> Out[T, U]:
-        match (kwargs, self.call(**kwargs)):
-            case (LTD(), Passthrough()):
-                return kwargs.__last__, kwargs
-            case (_, Passthrough()):
+        match self.call(**kwargs):
+            case Passthrough():
                 return kwargs["__last__"], kwargs
-            case (LTD(), KeepKWs(u)):
-                kwargs.__last__ = u
-                return u, kwargs
-            case (_, KeepKWs(u)):
+            case KeepKWs(u):
                 kwargs["__last__"] = u
                 return u, kwargs
-            case (_, DropKWs(u)):
-                return u, LTD(__last__=u)
-            case (_, SetKWs(u, kws)):
+            case DropKWs(u):
+                return u, {"__last__": u}
+            case SetKWs(u, kws):
                 kws.__last__ = u
                 return u, kws
             case u:

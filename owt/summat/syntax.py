@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Hashable, Any
+from typing import Callable, Sequence, Hashable, Any, Optional
 import io
 from owt.summat.adaptor import Adaptor, Nullary, DropKWs, CallOut
 from owt.summat.functional import (
@@ -28,11 +28,11 @@ import dataclasses
 class Owt[**T, U](Adaptor[T, U]):
     kwargs_cls: type[T.kwargs]
     pipeline: list[Adaptor]
-    input_kwargs: T.kwargs | None = None
+    input_kwargs: Optional[T.kwargs]
 
     @classmethod
     def builder(cls, kwargs_cls: type[T.kwargs]) -> "Owt[T, T.kwargs]":
-        return cls(kwargs_cls=kwargs_cls, pipeline=[])
+        return cls(kwargs_cls=kwargs_cls, pipeline=[], input_kwargs=None)
 
     def to[V](self, adaptor: Adaptor[[U], V]) -> "Owt[T, V]":
         return Owt(
@@ -146,5 +146,5 @@ class Owt[**T, U](Adaptor[T, U]):
         return DropKWs(out)
 
 
-def pipe[**T](kwargs_cls: type[T.kwargs]) -> Owt[T, T.kwargs]:
+def pipe[**T](kwargs_cls: type[T.kwargs] = dict) -> Owt[T, T.kwargs]:
     return Owt.builder(kwargs_cls)
