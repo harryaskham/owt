@@ -72,7 +72,7 @@ class Adaptor[**T, U](abc.ABC):
                 raise ValueError(f"Invalid call() CallOut: {u}")
 
     @abc.abstractmethod
-    def call(self, **kwargs: T.kwargs) -> CallOut[U]: ...
+    def call(self, *, __last__, **kwargs: T.kwargs) -> CallOut[U]: ...
 
     def done(self) -> Callable[T, U]:
         def _run(*args, **kwargs: T.kwargs) -> U:

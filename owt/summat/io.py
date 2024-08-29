@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, Out, Nullary
+from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs, HasLast
 from owt.summat.functional import Const
 from typing import Text, Unpack, Sequence, Any, Callable
 import logging
@@ -11,14 +11,15 @@ from flask import request
 import json
 
 
-class Input[T](Adaptor[Any, Nullary]):
+class Input[T](Adaptor[Any, T]):
     """Re-seed the pipeline with the initial input kwargs."""
 
     def __init__(self, get_input: Callable[[], T]) -> None:
         self.get_input = get_input
 
-    def __call__(self, **_: Any) -> Out[T]:
-        return Nullary(), self.get_input()
+    def call(self, **kwargs) -> CallOut[T]:
+        u = self.get_input()
+        return SetKWs(u, u)
 
 
 class DataSource(Const[dict[str, Any]]):
@@ -37,24 +38,20 @@ class PathSource(Const[list[str]]):
         super().__init__(segments)
 
 
-class BufferSink(Adaptor["BufferSink.Kwargs", tuple[Text, int]]):
+class BufferSink(Adaptor[[io.BytesIO], bytes]):
     """Sink the last value output to a buffer."""
 
-    class Kwargs(Args):
-        buf: io.BytesIO
-
-    def __call__(self, **kwargs: Unpack[Kwargs]) -> Out[tuple[Text, int]]:
-        buf = kwargs["buf"]
-        return (buf.getvalue(), 200), {}
+    def call(self, *, __last__: io.BytesIO, **_) -> CallOut[bytes]:
+        return DropKWs(__last__.getvalue())
 
 
-class NameOutput[T](Adaptor[Args, T]):
+class NameOutput[T](Adaptor[HasLast[T], T]):
     """Give a kwarg name to the last value output."""
 
     def __init__(self, name: str) -> None:
         self.name = name
 
-    def __call__(self, **kwargs: Unpack[Args]) -> Out[T]:
+    def call(self, *, __last__: T,  **kwargs) -> CallOut[T]:
         new_kwargs = copy.copy(kwargs)
         new_kwargs[self.name] = new_kwargs["__last__"]
         return new_kwargs["__last__"], new_kwargs

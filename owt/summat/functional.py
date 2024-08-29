@@ -1,6 +1,6 @@
-from owt.summat.adaptor import LTD, Adaptor, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
+from owt.summat.adaptor import Adaptor, HasLast, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough
 
-from typing import Any, Callable, Sequence, Unpack
+from typing import Any, Callable, Sequence
 
 
 class F[**T, U](Adaptor[T, U]):
@@ -75,43 +75,38 @@ class Map[T, U](Adaptor[HasLast[Sequence[T]], Sequence[U]]):
     def __init__(self, f: Callable[[T], U]) -> None:
         self.f = f
 
-    def call(self, **kwargs: HasLast[Sequence[T]]) -> CallOut[Sequence[U]]:
-        def getLast[L](__last__: L, **_) -> L:
-            return __last__
-        xs: Sequence[T] = getLast(**kwargs)
-        return DropKWs([self.f(x) for x in xs])
+    def call(self, *, __last__: Sequence[T], **_) -> CallOut[Sequence[U]]:
+        return DropKWs([self.f(x) for x in __last__])
 
 
-class Foldl[T, U, V](Adaptor[T, V]):
-    def __init__(self, f: Callable[[U, V], V], initial: U) -> None:
+class Foldl[T, U](Adaptor[HasLast[Sequence[T]], U]):
+    def __init__(self, f: Callable[[U, T], U], initial: U) -> None:
         self.f = f
         self.initial = initial
 
-    def call(self, **kwargs: HasLast[T]) -> CallOut[V]:
-        sequence = kwargs["__last__"]
+    def call(self, *, __last__: Sequence[T], **_) -> CallOut[U]:
         result = self.initial
-        for item in sequence:
+        for item in __last__:
             result = self.f(result, item)
         return DropKWs(result)
 
-
-class Foldl1[T, V](Adaptor[T, V]):
-    def __init__(self, f: Callable[[V, V], V]) -> None:
+class Foldl1[T](Adaptor[HasLast[Sequence[T]], T]):
+    def __init__(self, f: Callable[[T, T], T]) -> None:
         self.f = f
 
-    def call(self, **kwargs: HasLast[T]) -> CallOut[V]:
-        sequence = kwargs["__last__"]
-        if not sequence:
+    def call(self, *, __last__: Sequence[T], **_) -> CallOut[T]:
+        if not __last__:
             raise ValueError("Sequence must not be empty for Foldl1")
-        result = sequence[0]
-        for item in sequence[1:]:
+        result = __last__[0]
+        for item in __last__[1:]:
             result = self.f(result, item)
         return DropKWs(result)
 
 
-class Ix[T](Adaptor[Sequence[T], T]):
+
+class Ix[T](Adaptor[HasLast[Sequence[T]], T]):
     def __init__(self, i: int) -> None:
         self.i = i
 
-    def call(self, **kwargs: HasLast[Sequence[T]]) -> CallOut[T]:
-        return DropKWs(kwargs["__last__"][self.i])
+    def call(self, *, __last__: Sequence[T], **_) -> CallOut[T]:
+        return DropKWs(__last__[self.i])
