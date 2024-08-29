@@ -30,6 +30,7 @@ in
       pip install -r requirements.bark.txt
       python -c "import nltk; nltk.download('punkt')"
     '' else '''') + ''
+      pip install -e .
       yes | mypy --install-types
       zsh
     '';
