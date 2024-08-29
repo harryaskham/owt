@@ -218,7 +218,7 @@ def test_clear_removes_kwargs(client: FlaskClient):
         expected="no kwargs",
         args={"x": 1, "y": 2},
         code="""
-run = pipe().clear().f(lambda: "no kwargs").done()
+run = pipe().clear().f(lambda _: "no kwargs").done()
 """,
     )
 
