@@ -1,4 +1,4 @@
-from owt.summat.adaptor import In, Adaptor, Out, Nullary
+from owt.summat.adaptor import Adaptor, Out, Nullary
 from owt.summat.functional import Const
 from typing import Text, Unpack, Sequence, Any, Callable
 import logging

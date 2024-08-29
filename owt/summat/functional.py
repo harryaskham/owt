@@ -1,22 +1,20 @@
-from owt.summat.adaptor import Adaptor, Out, WithLast
+from owt.summat.adaptor import Adaptor, Out, L
 
-import copy
-import logging
-from typing import Any, Callable, Sequence, Unpack
+from typing import Any, Callable, Sequence
 
 
-class F[T, TK, U, UK](Adaptor[T, TK, U, UK]):
-    def __init__(self, f: Callable[[T], U]) -> None:
+class F[**T, U](Adaptor[T, U]):
+    def __init__(self, f: Callable[T, U]) -> None:
         self.f = f
 
-    def __call__(self, **kwargs: Unpack[WithLast[T]]) -> Out[U]:
+    def __call__(self, **kwargs: T.kwargs) -> Out[T, U]:
         match list(kwargs.keys()):
             case ["__last__"]:
                 _in = kwargs["__last__"]
                 out = self.f(_in)
             case _:
                 out = self.f(**kwargs)
-        return out, {"__last__": out}
+        return out, L({"__last__": out})
 
 
 class Exec[T](F[T, T]):
