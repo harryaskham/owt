@@ -1,5 +1,6 @@
 import base64
 import unittest.mock
+from typing import Any
 from owt.summat.io import Install
 import pytest
 import json
@@ -24,7 +25,7 @@ def init_server():
 def assert_owt_exec(
     client: FlaskClient,
     expected: str,
-    args: dict | None = None,
+    args: Any = None,
     extra_params: dict | None = None,
     method: str = "GET",
     path: str = "/test",
@@ -121,17 +122,6 @@ class Obj(dict):
         self["y"] = y
 
 run = pipe().const(Obj(123, "abc")).done()
-""",
-    )
-
-
-def test_f_explicit_last(client: FlaskClient):
-    assert_owt_exec(
-        client,
-        expected="6",
-        args={"__last__": 5},
-        code="""
-run = pipe().f(lambda x: x + 1).done()
 """,
     )
 
@@ -252,9 +242,9 @@ def test_importing(client: FlaskClient):
         code="""
 run = (
     pipe()
-    .path()
     .importing("json")
-    .f(lambda path: json.dumps(path))
+    .path()
+    .f(lambda p: json.dumps(p))
     .f(lambda x: json.loads(x))
     .last()
     .done()
@@ -318,7 +308,14 @@ run = (pipe()
 
 def test_fork(client: FlaskClient):
     code = """
-run = pipe().path().last().fork(pipe().f(len), pipe().const("right")).cast(str).done()
+run = (
+    pipe()
+    .path()
+    .last()
+    .fork(pipe().f(len),
+          pipe().const("right"))
+    .cast(str)
+   .done())
 """
 
     assert_owt_exec(client, path="/test", expected="(4, 'right')", code=code)

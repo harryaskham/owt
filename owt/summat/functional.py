@@ -1,4 +1,13 @@
-from owt.summat.adaptor import Adaptor, CallOut, KeepKWs, DropKWs, SetKWs, Passthrough, PassKWs, Nullary
+from owt.summat.adaptor import (
+    Adaptor,
+    CallOut,
+    KeepKWs,
+    DropKWs,
+    SetKWs,
+    Passthrough,
+    PassKWs,
+    Nullary,
+)
 
 from typing import Any, Callable
 

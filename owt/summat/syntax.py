@@ -1,6 +1,6 @@
 from typing import Callable, Sequence, Hashable, Any, Optional
 import io
-from owt.summat.adaptor import Adaptor, Nullary, DropKWs, CallOut
+from owt.summat.adaptor import Adaptor, Nullary, CallOut
 from owt.summat.functional import (
     F,
     Exec,
@@ -21,22 +21,28 @@ from owt.summat.io import (
 from owt.summat.file import (
     LoadFile,
 )
-import dataclasses
 
 
-@dataclasses.dataclass
+class InputKwargs[**T]:
+    def __init__(self, kws: Optional[T.kwargs] = None):
+        self.kws = kws
+
+
 class Owt[**T, U](Adaptor[T, U]):
-    kwargs_cls: type[T.kwargs]
-    pipeline: list[Adaptor]
-    input_kwargs: Optional[T.kwargs]
-
-    @classmethod
-    def builder(cls, kwargs_cls: type[T.kwargs]) -> "Owt[T, T.kwargs]":
-        return cls(kwargs_cls=kwargs_cls, pipeline=[], input_kwargs=None)
+    def __init__(
+        self,
+        kwargs_cls: type[T.kwargs],
+        input_kwargs: InputKwargs[T],
+        op: Adaptor[T, U] | None = None,
+    ):
+        self.kwargs_cls = kwargs_cls
+        self.input_kwargs = input_kwargs
+        self.op: Adaptor[T, U] = op or self.mk_input()
 
     def to[V](self, adaptor: Adaptor[[U], V]) -> "Owt[T, V]":
+        op = self.op.compose(adaptor)
         return Owt(
-            pipeline=self.pipeline + [adaptor],
+            op=op,
             kwargs_cls=self.kwargs_cls,
             input_kwargs=self.input_kwargs,
         )
@@ -50,8 +56,18 @@ class Owt[**T, U](Adaptor[T, U]):
     def installing(self, *packages: str) -> "Owt[T, U]":
         return self.to(Install(*packages))
 
+    def mk_input(self) -> Input[T.kwargs]:
+        def deref():
+            match self.input_kwargs.kws:
+                case None:
+                    raise ValueError("input_kwargs is not set")
+                case kws:
+                    return kws
+
+        return Input(deref)
+
     def input(self) -> "Owt[T, T.kwargs]":
-        return self.to(Input(lambda: self.input_kwargs))
+        return self.to(self.mk_input())
 
     def query(self) -> "Owt[T, dict[str, str]]":
         return self.to(QuerySource())
@@ -134,18 +150,10 @@ class Owt[**T, U](Adaptor[T, U]):
         )
 
     def call(self, **kwargs: T.kwargs) -> CallOut[U]:
-        self.input_kwargs = kwargs
+        self.input_kwargs.kws = kwargs
         run_kwargs = self.kwargs_cls(**kwargs)
-        for adaptor in self.pipeline:
-            out, out_kwargs = adaptor(**run_kwargs)
-            run_kwargs = self.kwargs_cls(**out_kwargs)
-            run_kwargs["__last__"] = out
-        match out:
-            case Nullary():
-                raise ValueError("Run cannot return Nullary")
-            case _:
-                return DropKWs(out)
+        return self.op.call(**run_kwargs)
 
 
 def pipe[**T](kwargs_cls: type[T.kwargs] = dict) -> Owt[T, T.kwargs]:
-    return Owt.builder(kwargs_cls)
+    return Owt(kwargs_cls=kwargs_cls, input_kwargs=InputKwargs())

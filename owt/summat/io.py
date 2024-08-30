@@ -1,4 +1,4 @@
-from owt.summat.adaptor import Adaptor, CallOut, DropKWs, SetKWs, PassKWs
+from owt.summat.adaptor import Adaptor, CallOut, DropKWs, PassKWs
 from owt.summat.functional import Const, Exec
 from typing import Any, Callable
 import subprocess
@@ -10,15 +10,15 @@ from flask import request
 import json
 
 
-class Input[T](Adaptor[Any, T]):
+class Input[**T](Adaptor[Any, T.kwargs]):
     """Re-seed the pipeline with the initial input kwargs."""
 
-    def __init__(self, get_input: Callable[[], T]) -> None:
+    def __init__(self, get_input: Callable[[], T.kwargs]) -> None:
         self.get_input = get_input
 
-    def call(self, **kwargs) -> CallOut[T]:
-        u = self.get_input()
-        return SetKWs(u, u)
+    def call(self, **kwargs) -> CallOut[T.kwargs]:
+        kws = self.get_input()
+        return PassKWs(kws)
 
 
 class JSONDataSource(Const[Any]):
@@ -71,7 +71,7 @@ class Import[**T, U](Exec[T, U]):
     """Imports available to the rest of the pipeline."""
 
     def __init__(self, *modules) -> None:
-        def f(*args, **kwargs):
+        def f(*_: T.args, **kwargs: T.kwargs):
             for module in modules:
                 importlib.import_module(module)
 
