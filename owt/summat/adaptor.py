@@ -24,17 +24,11 @@ class DropKWs[U](Special):
 
 
 @dataclasses.dataclass(frozen=True)
-class SetKWs[U, KW](Special):
-    u: U
-    kwargs: KW
-
-
-@dataclasses.dataclass(frozen=True)
 class PassKWs[KW](Special):
     kwargs: KW
 
 
-type CallOut[U] = KeepKWs[U] | DropKWs[U] | SetKWs[U, Any] | PassKWs[Any] | Passthrough
+type CallOut[U] = KeepKWs[U] | DropKWs[U] |  PassKWs[Any] | Passthrough
 
 
 type OutKW[**T, U] = tuple[U, T.kwargs]
@@ -70,10 +64,6 @@ class Adaptor[**T, U](abc.ABC):
             case DropKWs(u):
                 logging.debug("DropKWs: %s %s, %s", u, kwargs, self)
                 return u, {"__last__": u}
-            case SetKWs(u, kws):
-                kws["__last__"] = u
-                logging.debug("SetKWs: %s %s, %s", u, kws, self)
-                return u, kws
             case u:
                 raise ValueError(f"Invalid call() CallOut: {u}")
 

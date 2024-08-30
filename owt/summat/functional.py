@@ -3,7 +3,6 @@ from owt.summat.adaptor import (
     CallOut,
     KeepKWs,
     DropKWs,
-    SetKWs,
     Passthrough,
     PassKWs,
     Nullary,
@@ -72,8 +71,6 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
                     return KeepKWs(value)
                 case DropKWs(value):
                     return DropKWs(value)
-                case SetKWs(value, kwargs):
-                    return SetKWs(value, kwargs)
                 case PassKWs(kwargs):
                     return PassKWs(kwargs)
 
