@@ -1,7 +1,9 @@
 import base64
 import unittest.mock
-from typing import Any
+from typing import Any, Callable
 from owt.summat.io import Install
+from owt import pipe
+from owt.summat.syntax import Owt
 import pytest
 import json
 import logging
@@ -319,3 +321,9 @@ run = (
 """
 
     assert_owt_exec(client, path="/test", expected="(4, 'right')", code=code)
+
+def test_raw_pipe():
+    p: Owt[Any, int] = pipe().const(1).f(lambda x: x + 1)
+    assert p() == (2, {"__last__": 2})
+    run: Callable[[Any], bool]= p.done()
+    assert run() == 2

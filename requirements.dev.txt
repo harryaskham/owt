@@ -4,3 +4,4 @@ python-lsp-server
 python-lsp-ruff
 pylsp-mypy
 pytest
+pytest-mypy
