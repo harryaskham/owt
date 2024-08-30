@@ -322,8 +322,8 @@ run = (
 
     assert_owt_exec(client, path="/test", expected="(4, 'right')", code=code)
 
-def test_raw_pipe():
+def test_raw_pipe() -> None:
     p: Owt[Any, int] = pipe().const(1).f(lambda x: x + 1)
     assert p() == (2, {"__last__": 2})
-    run: Callable[[Any], bool]= p.done()
-    assert run() == 2
+    run: Callable[[Any], int] = p.done()
+    assert run(None) == 2

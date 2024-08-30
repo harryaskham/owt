@@ -82,11 +82,11 @@ class Install[**T, U](Exec[T, U]):
     """Installs via pip."""
 
     @classmethod
-    def pip_install(*packages: str) -> None:
+    def pip_install(cls, *packages: str) -> None:
         subprocess.check_call([sys.executable, "-m", "pip", "install", *packages])
 
-    def __init__(self, *packages) -> None:
-        def f(*args, **kwargs):
-            Install.pip_install(*packages)
+    def __init__(self, *packages: str) -> None:
+        def f(*args: T.args, **kwargs: T.kwargs):
+            self.pip_install(*packages)
 
         super().__init__(f)

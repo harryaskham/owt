@@ -1,11 +1,11 @@
 test:
-	python -m pytest
+	pytest --mypy
 
 run:
 	python -m owt.server
 
 mypy:
-	mypy
+	mypy --check-untyped-defs
 
 lint:
 	ruff check
