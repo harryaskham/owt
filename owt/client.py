@@ -20,9 +20,12 @@ code_run.add_argument(
     "--run",
     help="Code containing the run function",
 )
-parser.add_argument(
-    "--kwargs", default="{}", help="Kwargs to call with (as valid python dict)"
+kwargs_group = parser.add_mutually_exclusive_group()
+kwargs_group.add_argument(
+    "--kwargs", help="Kwargs to call with (as valid python dict)"
 )
+kwargs_group.add_argument(
+    "--arg", nargs=2, action="append", help="Args as --arg name value")
 parser.add_argument("--method", default="GET", help="HTTP method to use")
 parser.add_argument("--fn-name", default="run", help="Runner function name")
 # Switch to only print URL
@@ -54,7 +57,7 @@ def main():
     except argparse.ArgumentError as e:
         logging.error(f"Error parsing arguments: {e}")
         sys.exit(1)
-    result = call_owt(address=args.address, method=args.method, code=(args.code or f"run = {args.run}"), kwargs=args.kwargs, fn_name=args.fn_name, url_only=args.url)
+    result = call_owt(address=args.address, method=args.method, code=(args.code or f"run = {args.run}"), kwargs=(args.kwargs or "{%s}" % ",".join([f"'{a[0]}': {a[1]}" for a in args.arg]) or "{}"), fn_name=args.fn_name, url_only=args.url)
     sys.stdout.buffer.write(result)
 
 
