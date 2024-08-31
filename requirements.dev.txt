@@ -1,5 +1,6 @@
 mypy
 flask-httpauth-stubs
+types-requests
 python-lsp-server
 python-lsp-ruff
 pylsp-mypy

@@ -1,5 +1,5 @@
 from owt.summat.adaptor import Adaptor, CallOut, DropKWs, PassKWs
-from owt.summat.functional import Const, Exec
+from owt.summat.functional import Const, Exec, F
 from typing import Any, Callable
 import subprocess
 import sys
@@ -88,5 +88,17 @@ class Install[**T, U](Exec[T, U]):
     def __init__(self, *packages: str) -> None:
         def f(*args: T.args, **kwargs: T.kwargs):
             self.pip_install(*packages)
+
+        super().__init__(f)
+
+class Shell(F[[str], bytes]):
+
+    @classmethod
+    def run_cmd(cls, cmd: str) -> bytes:
+        return subprocess.run(["bash", "-c", cmd], stdout=subprocess.PIPE).stdout
+
+    def __init__(self) -> None:
+        def f(cmd: str) -> bytes:
+            return self.run_cmd(cmd)
 
         super().__init__(f)

@@ -15,6 +15,7 @@ from owt.summat.io import (
     Import,
     Install,
     Input,
+    Shell,
     QuerySource,
     JSONDataSource,
 )
@@ -117,6 +118,9 @@ class Owt[**T, U](Adaptor[T, U]):
 
     def cast[V](self, cst: Callable[[U], V]) -> "Owt[T, V]":
         return self.f(cst)
+
+    def shell(self) -> "Owt[T, bytes]":
+        return self.cast(str).to(Shell())
 
     def map[V](self, f: Callable[[Any], V]) -> "Owt[T, Sequence[V]]":
         return self.cast(lambda u: isinstance(u, list) and u or []).f(

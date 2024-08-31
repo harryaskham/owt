@@ -28,7 +28,7 @@ class PassKWs[KW](Special):
     kwargs: KW
 
 
-type CallOut[U] = KeepKWs[U] | DropKWs[U] |  PassKWs[Any] | Passthrough
+type CallOut[U] = KeepKWs[U] | DropKWs[U] | PassKWs[Any] | Passthrough
 
 
 type OutKW[**T, U] = tuple[U, T.kwargs]
