@@ -2,6 +2,9 @@
 name = "owt"
 version = "0.0.1"
 
+[tool.setuptools.packages.find]
+where = ["owt"]
+
 [tool.mypy]
 enable_incomplete_feature = "NewGenericSyntax"
 packages = "owt"
