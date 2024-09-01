@@ -254,12 +254,17 @@ class Unsafe:
     def unsafe_exec_fn[**T](self) -> Callable[T, Any]:
         _globals = globals()
         _locals = locals()
-        logging.info("Running code:\n\n%s", self.code_indented(4))
+        code = f"""
+from owt import *
+
+{self.code}
+"""
+        logging.info("Running code:\n\n%s", code)
         try:
-            exec(self.code, _globals, _locals)
+            exec(code, _globals, _locals)
         except Exception as e:
             raise RuntimeError(
-                f"Error compiling Unsafe code: {e}\n\n{self.code_indented(4)}"
+                f"Error compiling Unsafe code: {e}\n\n{code}"
             )
         run_fn = _locals.get(self.fn_name) or _globals.get(self.fn_name)
         if not run_fn:
@@ -298,6 +303,7 @@ def coerce_response(result: Any) -> ValidResponse:
 
 
 @app.route("/<path:path>", methods=["GET", "POST"])
+@app.route("/b64/<path:path>", methods=["GET", "POST"])
 @auth.login_required
 def unsafe_exec(path: str | None) -> ValidResponse:
     del path

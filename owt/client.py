@@ -1,4 +1,5 @@
 import argparse
+import urllib.parse
 import requests
 import sys
 import base64
@@ -33,15 +34,15 @@ parser.add_argument("--url", action="store_true", help="Print URL only")
 
 
 def call_owt(address: str, method: str, code: str, kwargs: str, fn_name: str, url_only: bool) -> bytes:
-    code_b64 = base64.b64encode(code.encode()).decode()
-    kwargs_b64 = base64.b64encode(kwargs.encode()).decode()
+    code_b64 = base64.b64encode(code.encode())
+    kwargs_b64 = base64.b64encode(kwargs.encode())
     data = {
         "code_b64": code_b64,
         "kwargs_b64": kwargs_b64,
     }
 
     if url_only:
-        return f"{address}?code_b64={code_b64}&kwargs_b64={kwargs_b64}".encode()
+        return (f"{address}?{urllib.parse.urlencode(data)}").encode()
 
     match method.lower():
         case "get":
