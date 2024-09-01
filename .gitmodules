@@ -1,0 +1,3 @@
+[submodule "clients/owt-hs"]
+	path = clients/owt-hs
+	url = git@github.com:harryaskham/owt-hs.git
