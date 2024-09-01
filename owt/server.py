@@ -179,13 +179,19 @@ class Unsafe:
         try:
             raw_kwargs = base64.b64decode(self.kwargs_b64).decode("utf-8")
             logging.info("Raw kwargs: %s", raw_kwargs)
-            decoded_kwargs = eval(raw_kwargs)
-            logging.info("Decoded kwargs: %s", decoded_kwargs)
-            match decoded_kwargs:
-                case builtins.dict():
-                    return decoded_kwargs
-                case _:
-                    return {"__last__": decoded_kwargs}
+
+            def decode_kwargs(raw_kwargs: str) -> dict[str, Any]:
+                decoded_kwargs = eval(raw_kwargs)
+                logging.info("Decoded kwargs: %s", decoded_kwargs)
+                match decoded_kwargs:
+                    case builtins.dict():
+                        return decoded_kwargs
+                    case builtins.str():
+                        return decode_kwargs(decoded_kwargs)
+                    case _:
+                        raise ValueError(f"Invalid kwargs for decode: {decoded_kwargs}")
+
+            return decode_kwargs(raw_kwargs)
         except Exception as e:
             raise ValueError(f"Failed to decode kwargs: {e}")
 
