@@ -51,7 +51,7 @@ class Owt[**T, U](Adaptor[T, U]):
     def open(self, root_dir: str | None = None) -> "Owt[T, io.BytesIO]":
         return self.to(LoadFile(root_dir))
 
-    def importing(self, *modules: str) -> "Owt[T, U]":
+    def importing(self, *modules: str | Callable[[], Any]) -> "Owt[T, U]":
         return self.to(Import(*modules))
 
     def installing(self, *packages: str) -> "Owt[T, U]":
@@ -134,7 +134,9 @@ class Owt[**T, U](Adaptor[T, U]):
                 _acc = f(_acc, x)
             return _acc
 
-        return self.cast(lambda u: isinstance(u, list) and u or []).f(go)
+        return self.cast(
+            lambda __last__: isinstance(__last__, list) and __last__ or []
+        ).f(go)
 
     def foldl1[V](self, f: Callable[[V, V], V]) -> "Owt[T, V]":
         def go(xs):

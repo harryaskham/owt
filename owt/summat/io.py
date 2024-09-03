@@ -70,10 +70,14 @@ class Kwargs[**T, U](Adaptor[T, U]):
 class Import[**T, U](Exec[T, U]):
     """Imports available to the rest of the pipeline."""
 
-    def __init__(self, *modules) -> None:
+    def __init__(self, *modules: str | Callable[[], Any]) -> None:
         def f(*_: T.args, **kwargs: T.kwargs):
             for module in modules:
-                importlib.import_module(module)
+                match module:
+                    case str():
+                        importlib.import_module(module)
+                    case Callable():
+                        module()
 
         super().__init__(f)
 
@@ -91,8 +95,8 @@ class Install[**T, U](Exec[T, U]):
 
         super().__init__(f)
 
-class Shell(F[[str], bytes]):
 
+class Shell(F[[str], bytes]):
     @classmethod
     def run_cmd(cls, cmd: str) -> bytes:
         return subprocess.run(["bash", "-c", cmd], stdout=subprocess.PIPE).stdout

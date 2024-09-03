@@ -154,7 +154,7 @@ def test_identity(client: FlaskClient):
     assert_owt_exec(
         client,
         expected="test",
-        args={"__last__": "test"},
+        args="test",
         code="""
 run = pipe().identity().done()
 """,
@@ -186,7 +186,7 @@ def test_foldl(client: FlaskClient):
     assert_owt_exec(
         client,
         expected="15",
-        args=[1, 2, 3, 4, 5],
+        args={"__last__": [1, 2, 3, 4, 5]},
         code="""
 run = pipe().foldl(lambda acc, x: acc + x, 0).f(str).done()
 """,
@@ -197,7 +197,7 @@ def test_ix(client: FlaskClient):
     assert_owt_exec(
         client,
         expected="b",
-        args=["a", "b", "c"],
+        args={"__last__": ["a", "b", "c"]},
         code="""
 run = pipe().ix(1).done()
 """,

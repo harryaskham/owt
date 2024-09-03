@@ -181,7 +181,14 @@ class Unsafe:
             logging.info("Raw kwargs: %s", raw_kwargs)
 
             def decode_kwargs(raw_kwargs: str) -> dict[str, Any]:
-                decoded_kwargs = eval(raw_kwargs)
+                try:
+                    decoded_kwargs = eval(raw_kwargs)
+                except Exception:
+                    logging.warning(
+                        "Failed to eval kwargs, treating as string: %s", raw_kwargs
+                    )
+                    return {"__last__": raw_kwargs}
+
                 logging.info("Decoded kwargs: %s", decoded_kwargs)
                 match decoded_kwargs:
                     case builtins.dict():
@@ -189,7 +196,10 @@ class Unsafe:
                     case builtins.str():
                         return decode_kwargs(decoded_kwargs)
                     case _:
-                        raise ValueError(f"Invalid kwargs for decode: {decoded_kwargs}")
+                        logging.warning(
+                            "Passing decoded kwargs as single value: %s", decoded_kwargs
+                        )
+                        return {"__last__": decoded_kwargs}
 
             return decode_kwargs(raw_kwargs)
         except Exception as e:
@@ -269,9 +279,7 @@ from owt import *
         try:
             exec(code, _globals, _locals)
         except Exception as e:
-            raise RuntimeError(
-                f"Error compiling Unsafe code: {e}\n\n{code}"
-            )
+            raise RuntimeError(f"Error compiling Unsafe code: {e}\n\n{code}")
         run_fn = _locals.get(self.fn_name) or _globals.get(self.fn_name)
         if not run_fn:
             raise ValueError(f"No '{self.fn_name}' method defined in code")
