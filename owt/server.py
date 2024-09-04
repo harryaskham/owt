@@ -1,4 +1,5 @@
 import argparse
+import traceback
 import types
 import sys
 import builtins
@@ -19,6 +20,7 @@ from flask_httpauth import HTTPBasicAuth
 
 # Any syntax forwards to be available in the global namespace
 pipe = pipe
+
 
 def configure_logging(verbosity: int = 0):
     level = "INFO"
@@ -52,6 +54,7 @@ def configure_logging(verbosity: int = 0):
     )
     logging.info(f"Setting verbosity/level to {verbosity}/{level}")
 
+
 parser = argparse.ArgumentParser(
     description="Owt - Lightweight endpoints for serving owt yer like"
 )
@@ -69,9 +72,9 @@ parser.add_argument(
     help="Basic auth username:password_sha256. --auth for owt:owt",
 )
 v_group = parser.add_mutually_exclusive_group()
-v_group.add_argument("-v", action='store_true')
-v_group.add_argument("-vv", action='store_true')
-v_group.add_argument("-vvv", action='store_true')
+v_group.add_argument("-v", action="store_true")
+v_group.add_argument("-vv", action="store_true")
+v_group.add_argument("-vvv", action="store_true")
 
 
 app = Flask(__name__)
@@ -157,7 +160,7 @@ class CacheKey:
 
     def __repr__(self):
         if self.kwargs_b64:
-            return f"CacheKey({self.path}, {self.kwargs})"
+            return f"CacheKey({self.path}, {self.kwargs_b64})"
         else:
             return f"CacheKey({self.path})"
 
@@ -304,11 +307,12 @@ from owt import *
         return run_fn
 
     def unsafe_exec(self) -> Any:
+        logging.info("Running with kwargs: %s", self.kwargs)
         try:
-            logging.info("Running with kwargs: %s", self.kwargs)
             return self.unsafe_exec_fn()(**self.kwargs)
         except Exception as e:
-            logging.error(f"Error executing Unsafe code: {e}")
+            t = traceback.format_exc()
+            logging.error(f"Error executing Unsafe code: {e}\n\n{t}")
             raise RuntimeError(f"Error executing Unsafe code: {e}")
 
 
@@ -387,7 +391,9 @@ def main(port: int | None = None):
     except argparse.ArgumentError as e:
         logging.error(f"Error parsing arguments: {e}")
         sys.exit(1)
-    verbosity = max([level for (level, v) in enumerate([True, args.v, args.vv, args.vvv]) if v])
+    verbosity = max(
+        [level for (level, v) in enumerate([True, args.v, args.vv, args.vvv]) if v]
+    )
     configure_logging(verbosity)
     Server.serve(
         address=args.address,

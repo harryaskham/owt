@@ -22,18 +22,19 @@ code_run.add_argument(
     help="Code containing the run function",
 )
 kwargs_group = parser.add_mutually_exclusive_group()
+kwargs_group.add_argument("--kwargs", help="Kwargs to call with (as valid python dict)")
 kwargs_group.add_argument(
-    "--kwargs", help="Kwargs to call with (as valid python dict)"
+    "--arg", nargs=2, action="append", help="Args as --arg name value"
 )
-kwargs_group.add_argument(
-    "--arg", nargs=2, action="append", help="Args as --arg name value")
 parser.add_argument("--method", default="GET", help="HTTP method to use")
 parser.add_argument("--fn-name", default="run", help="Runner function name")
 # Switch to only print URL
 parser.add_argument("--url", action="store_true", help="Print URL only")
 
 
-def call_owt(address: str, method: str, code: str, kwargs: str, fn_name: str, url_only: bool) -> bytes:
+def call_owt(
+    address: str, method: str, code: str, kwargs: str, fn_name: str, url_only: bool
+) -> bytes:
     code_b64 = base64.b64encode(code.encode())
     kwargs_b64 = base64.b64encode(kwargs.encode())
     data = {
@@ -52,13 +53,25 @@ def call_owt(address: str, method: str, code: str, kwargs: str, fn_name: str, ur
         case m:
             raise ValueError(f"Unsupported method: {m}")
 
+
 def main():
     try:
         args = parser.parse_args()
     except argparse.ArgumentError as e:
         logging.error(f"Error parsing arguments: {e}")
         sys.exit(1)
-    result = call_owt(address=args.address, method=args.method, code=(args.code or f"run = {args.run}"), kwargs=(args.kwargs or "{%s}" % ",".join([f"'{a[0]}': {a[1]}" for a in args.arg]) or "{}"), fn_name=args.fn_name, url_only=args.url)
+    result = call_owt(
+        address=args.address,
+        method=args.method,
+        code=(args.code or f"run = {args.run}"),
+        kwargs=(
+            args.kwargs
+            or "{%s}" % ",".join([f"'{a[0]}': {a[1]}" for a in args.arg])
+            or "{}"
+        ),
+        fn_name=args.fn_name,
+        url_only=args.url,
+    )
     sys.stdout.buffer.write(result)
 
 

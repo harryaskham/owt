@@ -1,9 +1,8 @@
-from owt.summat.adaptor import Adaptor, CallOut, DropKWs, PassKWs
+from owt.summat.adaptor import Adaptor, CallOut, PassKWs
 from owt.summat.functional import Const, Exec, F
 from typing import Any, Callable
 import subprocess
 import sys
-import io
 import importlib
 import copy
 from flask import request
@@ -69,7 +68,7 @@ class Import[**T, U](Exec[T, U]):
                 match module:
                     case str():
                         importlib.import_module(module)
-                    case Callable():
+                    case _:
                         module()
 
         super().__init__(f)

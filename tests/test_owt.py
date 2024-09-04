@@ -8,7 +8,7 @@ import pytest
 import json
 import logging
 from flask.testing import FlaskClient
-from owt.server import app, Server
+from owt.server import app, Server, configure_logging
 
 
 @pytest.fixture
@@ -20,6 +20,7 @@ def client():
 
 @pytest.fixture(autouse=True, scope="module")
 def init_server():
+    configure_logging(3)
     app.config["TESTING"] = True
     Server.serve(address="127.0.0.1", port=9876, auth=None)
 

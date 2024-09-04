@@ -86,6 +86,7 @@ class Owt[**T, U](Adaptor[T, U]):
     def kwarg[V](self, kwarg: str) -> "Owt[T, V]":
         def f(__last__: U, **kwargs: V) -> V:
             return kwargs[kwarg]
+
         return self.f(f)
 
     def path(self) -> "Owt[T, list[str]]":
@@ -129,13 +130,14 @@ class Owt[**T, U](Adaptor[T, U]):
         return self.cast(str).to(Shell())
 
     def bytes(self) -> "Owt[T, bytes]":
-        def cst(t: T) -> bytes:
+        def cst(t: Any) -> bytes:
             match t:
                 case builtins.bytes():
                     return t
                 case io.BytesIO():
                     return t.getvalue()
             return bytes(t)
+
         return self.cast(cst)
 
     def map[V](self, f: Callable[[Any], V]) -> "Owt[T, Sequence[V]]":
@@ -143,8 +145,8 @@ class Owt[**T, U](Adaptor[T, U]):
             lambda xs: [f(x) for x in xs]
         )
 
-    def foldl[V](self, f: Callable[[V, U], V], acc: U) -> "Owt[T, V]":
-        def go(xs):
+    def foldl[V](self, f: Callable[[V, U], V], acc: V) -> "Owt[T, V]":
+        def go(xs: Sequence[U]) -> V:
             _acc = acc
             for x in xs:
                 _acc = f(_acc, x)

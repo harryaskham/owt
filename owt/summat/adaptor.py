@@ -2,7 +2,7 @@ import abc
 import logging
 import copy
 import dataclasses
-from typing import Callable, Concatenate, Any, TypedDict
+from typing import Callable, Concatenate, Any
 
 
 class Special: ...
@@ -11,13 +11,12 @@ class Special: ...
 class Nullary(Special): ...
 
 
-class PassthroughKW[U](TypedDict):
-    __last__: U
+type PassthroughKW[U] = dict[str, U]
 
 
 @dataclasses.dataclass(frozen=True)
 class Passthrough[U](Special):
-    u: U
+    u: U | Nullary
     kwargs: PassthroughKW[U]
 
 
@@ -32,8 +31,8 @@ class DropKWs[U](Special):
 
 
 @dataclasses.dataclass(frozen=True)
-class PassKWs[KW](Special):
-    kwargs: KW
+class PassKWs[U](Special):
+    kwargs: PassthroughKW[U]
 
 
 type CallOut[U] = KeepKWs[U] | DropKWs[U] | PassKWs[Any] | Passthrough[U]
@@ -51,16 +50,15 @@ class Adaptor[**T, U](abc.ABC):
         match self.call(**kwargs):
             case Passthrough(u, new_kwargs):
                 logging.debug("Passthrough with: %s, %s", u, new_kwargs)
-                return u, new_kwargs
-            case PassKWs(new_kwargs):
-                match kwargs.get("__last__"):
-                    case None:
-                        new_kwargs["__last__"] = Nullary()
-                        logging.debug("PassKWs: Nullary, %s, %s", self, new_kwargs)
+                match u:
+                    case Nullary():
                         return Nullary(), new_kwargs
-                    case u:
-                        logging.debug("PassKWs with last: %s, %s, %s", self, u, new_kwargs)
+                    case _:
                         return u, new_kwargs
+            case PassKWs(new_kwargs):
+                if "__last__" not in new_kwargs and "__last__" in kwargs:
+                    new_kwargs["__last__"] = kwargs["__last__"]
+                return Nullary(), new_kwargs
             case KeepKWs(u):
                 new_kwargs = copy.copy(kwargs)
                 new_kwargs["__last__"] = u
@@ -98,22 +96,11 @@ class Adaptor[**T, U](abc.ABC):
             def call(self, **kwargs: T.kwargs) -> CallOut[V]:
                 logging.debug("Calling composed with kwargs: %s", kwargs)
                 u, u_kwargs = this(**kwargs)
-                logging.debug("Composed intermediate result:\nOut: %s\nKwargs: %s", u, u_kwargs)
+                logging.debug(
+                    "Composed intermediate result:\nOut: %s\nKwargs: %s", u, u_kwargs
+                )
                 res = other.call(**u_kwargs)
                 logging.debug("Composed final result: %s", res)
                 return res
-                #match (u_kwargs.keys(), "__last__" in u_kwargs):
-                #    case (["__last__"], _):
-                #        logging.debug("Calling composed next with singleton last from %s", u_kwargs)
-                #        return other.call(__last__=u_kwargs["__last__"])
-                #    case ([], _):
-                #        logging.debug("Calling composed %s with no kwargs", u)
-                #        return other.call(__last__=u)
-                #    case (_, True):
-                #        logging.debug("Calling composed next with %s", u_kwargs)
-                #        return other.call(**u_kwargs)
-                #    case (_, False):
-                #        logging.debug("Calling composed next with %s and %s", u, u_kwargs)
-                #        return other.call(__last__=u, **u_kwargs)
 
         return Composed()

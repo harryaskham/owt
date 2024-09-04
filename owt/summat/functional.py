@@ -24,7 +24,8 @@ class F[**T, U](Adaptor[T, U]):
                 try:
                     out = self.f(**kwargs)
                 except Exception:
-                    del kwargs["__last__"]
+                    if "__last__" in kwargs:
+                        del kwargs["__last__"]
                     out = self.f(**kwargs)
         return DropKWs(out)
 
@@ -35,7 +36,7 @@ class Exec[**T, U](Adaptor[T, U]):
 
     def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         self.f(**kwargs)
-        return Passthrough(kwargs["__last__"], kwargs)
+        return Passthrough(kwargs.get("__last__", Nullary()), kwargs)
 
 
 class Const[U](Adaptor[Any, U]):
@@ -66,7 +67,7 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
         def merge(u: CallOut[U] | CallOut[V]) -> CallOut[U | V]:
             match u:
                 case Passthrough(l, kws):
-                    return Passthrough(l, kws)
+                    return Passthrough(l, dict(**kws))
                 case KeepKWs(value):
                     return KeepKWs(value)
                 case DropKWs(value):

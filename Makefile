@@ -1,5 +1,5 @@
 test:
-	pytest --mypy
+	python -m pytest --mypy 
 
 run:
 	python -m owt.server
@@ -10,5 +10,9 @@ mypy:
 lint:
 	ruff check
 	ruff format --check
+
+fix:
+	ruff check --fix
+	ruff format
 
 check: lint test mypy

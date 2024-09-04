@@ -3,7 +3,7 @@ from typing import Literal
 
 
 def run(
-    text: str | None = None,
+    text: str = "",
     speaker: str = "v2/en_speaker_6",
     sentence_template: str = "%s",
     split_type: Literal["sentence", "none"] = "sentence",
@@ -13,10 +13,10 @@ def run(
     import logging
     import json
     import io
-    import nltk
+    import nltk  # type: ignore
     import numpy as np
     import base64
-    from scipy.io.wavfile import write as write_wav
+    from scipy.io.wavfile import write as write_wav  # type: ignore
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     os.environ["SUNO_OFFLOAD_CPU"] = "0"
@@ -26,8 +26,8 @@ def run(
         case "large":
             os.environ["SUNO_USE_SMALL_MODELS"] = "0"
 
-    from bark.generation import generate_text_semantic, preload_models, SAMPLE_RATE
-    from bark.api import semantic_to_waveform
+    from bark.generation import generate_text_semantic, preload_models, SAMPLE_RATE  # type: ignore
+    from bark.api import semantic_to_waveform  # type: ignore
 
     preload_models()
 
@@ -44,19 +44,21 @@ def run(
                 sentences = nltk.sent_tokenize(clean_text)
             case "none":
                 sentences = [clean_text]
-        full_wav_array = None
+        full_wav_array: np.ndarray | None = None
         for i, raw_sentence in enumerate(sentences):
             sentence = sentence_template % raw_sentence
             logging.info(
                 "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
             )
-            semantic_tokens = generate_text_semantic(
+            semantic_tokens: np.ndarray = generate_text_semantic(
                 sentence,
                 history_prompt=speaker,
                 temp=0.6,
                 min_eos_p=0.05,
             )
-            wav_array = semantic_to_waveform(semantic_tokens, history_prompt=speaker)
+            wav_array: np.ndarray = semantic_to_waveform(
+                semantic_tokens, history_prompt=speaker
+            )
             full_wav_array = (
                 wav_array
                 if full_wav_array is None

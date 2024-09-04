@@ -1,8 +1,8 @@
-# example/bootstrap/bootstrap.py
+# example/meta/bootstrap.py
 
 
 def run(**kwargs):
-    global Server
+    from owt.server import Server
     import os
 
     payload_code_b64 = kwargs["payload_code_b64"]

@@ -6,8 +6,9 @@ version = "0.0.1"
 where = ["owt"]
 
 [tool.mypy]
-enable_incomplete_feature = "NewGenericSyntax"
 packages = "owt"
+enable_incomplete_feature = "NewGenericSyntax"
+check_untyped_defs = true
 
 [tool.pylsp-mypy]
 enabled = true
