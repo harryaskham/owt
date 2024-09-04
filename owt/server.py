@@ -322,6 +322,11 @@ type ValidResponse = str | bytes | Response | types.GeneratorType | tuple[str, i
 def coerce_response(result: Any) -> ValidResponse:
     if result is None:
         return make_response("")
+
+    if hasattr(result, "__iter__"):
+        # Catch generators
+        return result
+
     match result:
         case Response():
             return result
@@ -334,8 +339,8 @@ def coerce_response(result: Any) -> ValidResponse:
         case adaptor.Nullary():
             return make_response("")
         case _:
-            logging.warning("Result of exec being coerced via jsom.dumps")
-            return make_response(json.dumps(result))
+            logging.warning("Returning raw result")
+            return make_response(result)
 
 
 @app.route("/", methods=["GET", "POST"])
