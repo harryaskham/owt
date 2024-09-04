@@ -15,13 +15,25 @@ Send the logic for a virtual endpoint along with a request:
 Allowing quick access to arbitrary Python libraries from anywhere you can make an HTTP request:
 
 #+BEGIN_SRC bash :exports both :results code replace
-./example/summat/simple.sh http://localhost:9876
+./example/summat/simple.sh http://localhost:9876/owt
 #+END_SRC
 
 #+RESULTS:
-: B'# EXAMPLE/SUMMAT/SIMPLE.SH\N\NURL="$1"\NREAD -R -D \'\' CODE << EOF\NFROM OWT IMPORT SUMMAT AS S\N\NRUN = (\N    S.PIPE()\N    .TO(S.LOADFILE(ROOT_DIR=\'./EXAMPLE/SUMMAT\'))\N    .TO(S.NAMEOUTPUT(NAME=\'BUF\'))\N    .TO(S.BUFFERSINK())\N    .F(LAMBDA AB: (STR(AB[0]).UPPER(), AB[1]))\N    .DONE()\N)\NEOF\N\NCURL --JSON $(JO \\\N  CODE_B64=$(ECHO "$CODE" | BASE64 -W 0) \\\N  KWARGS_B64=$(ECHO "{\'PATH\': \'SIMPLE.SH\'}" | BASE64 -W 0) \\\N) $URL\N'
+#+begin_src bash
+B'# EXAMPLE/SUMMAT/SIMPLE.SH\N\NURL="$1"\NREAD -R -D \'\' CODE << EOF\NRUN = (PIPE()\N       .KWARG(\'PATH\')\N       .OPEN(ROOT_DIR=\'./EXAMPLE/SUMMAT\')\N       .BYTES()\N       .F(LAMBDA AB: STR(AB).UPPER())\N       .DONE())\NEOF\N\NCURL --JSON $(JO \\\N  CODE_B64=$(ECHO "$CODE" | BASE64 -W 0) \\\N  KWARGS_B64=$(ECHO "{\'PATH\': \'SIMPLE.SH\'}" | BASE64 -W 0) \\\N) $URL\N'
+#+end_src
 
-Most of the examples below show ~owt~ "in the raw", without using the pipelining syntax sugar.
+Most of the examples below show ~owt~ "in the raw", without using the pipelining syntax sugar. They also predate the client implementation, but I'll mostly leave it this way so one gets a sense of how simple things are under the hood. Still, the above is equiavalent to:
+
+#+BEGIN_SRC bash :exports both :results code replace
+source example/summat/simple.sh 2>/dev/null
+echo $(python -m owt.client --code "$CODE" --arg path \"simple.sh\" --address http://localhost:9876/owt)
+#+END_SRC
+
+#+RESULTS:
+#+begin_src bash
+# EXAMPLE/SUMMAT/SIMPLE.SH URL="$1" READ -R -D '' CODE << EOF RUN = (PIPE() .KWARG('PATH') .OPEN(ROOT_DIR='./EXAMPLE/SUMMAT') .BYTES() .F(LAMBDA AB: AB.DECODE('UTF-8').UPPER()) .DONE()) EOF CURL --JSON $(JO \ CODE_B64=$(ECHO "$CODE" | BASE64 -W 0) \ KWARGS_B64=$(ECHO "{'PATH': 'SIMPLE.SH'}" | BASE64 -W 0) \ ) $URL
+#+end_src
 
 ** What's This?
 

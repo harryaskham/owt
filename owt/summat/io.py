@@ -36,13 +36,6 @@ class PathSource(Const[list[str]]):
         super().__init__(request.path.strip("/").split("/"))
 
 
-class BufferSink(Adaptor[[io.BytesIO], bytes]):
-    """Sink the last value output to a buffer."""
-
-    def call(self, *, __last__: io.BytesIO, **_) -> CallOut[bytes]:
-        return DropKWs(__last__.getvalue())
-
-
 class NameOutput[**T, U](Adaptor[T, U]):
     """Give a kwarg name to the last value output."""
 

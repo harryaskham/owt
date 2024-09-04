@@ -2,16 +2,12 @@
 
 URL="$1"
 read -r -d '' CODE << EOF
-from owt import summat as s
-
-run = (
-    s.pipe()
-    .to(s.LoadFile(root_dir='./example/summat'))
-    .to(s.NameOutput(name='buf'))
-    .to(s.BufferSink())
-    .f(lambda ab: (str(ab[0]).upper(), ab[1]))
-    .done()
-)
+run = (pipe()
+       .kwarg('path')
+       .open(root_dir='./example/summat')
+       .bytes()
+       .f(lambda ab: ab.decode('utf-8').upper())
+       .done())
 EOF
 
 curl --json $(jo \

@@ -9,25 +9,26 @@ function owtInOwt() {
 def run(**kwargs):
   payload_code_b64 = kwargs['payload_code_b64']
   payload_kwargs_b64 = kwargs['payload_kwargs_b64']
+  global _SERVER
+  new_port = _SERVER.port + 1
   _globals = {'__name__': __name__+'_new',
-              'new_port': args.port + 1}
+              'new_port': new_port}
   _locals = {}
-  print('going one level down to port %s' % _globals['new_port'])
+  print('going one level down to port %s' % new_port)
 
   exec('''
 print('One level deeper, importing owt')
-from owt.server import *
+from owt import server
 from multiprocessing import Process
-args.port = new_port
-server_thread = Process(target=main)
+server_thread = Process(target=server.main, kwargs={"port": new_port})
 ''', _globals, _locals)
 
   def kill():
     import time
-    # time.sleep(1)
-    print('Killing server on %s' % args.port)
+    time.sleep(5)
+    print('Killing server on %s' % Server.sing().port)
     _locals['server_thread'].terminate()
-    print('Killed server on %d' % args.port)
+    print('Killed server on %d' % Server.sing().port)
 
   from multiprocessing import Process
   from flask import request
@@ -35,8 +36,7 @@ server_thread = Process(target=main)
   import urllib
 
   _locals['server_thread'].start()
-  bootstrapped_url = f"$URL:{_globals['new_port']}/{request.path}?code_b64={urllib.parse.quote_plus(payload_code_b64)}&kwargs_b64={urllib.parse.quote_plus(payload_kwargs_b64)}"
-  print(bootstrapped_url)
+  bootstrapped_url = f"$URL:{new_port}/{request.path}?code_b64={urllib.parse.quote_plus(payload_code_b64)}&kwargs_b64={urllib.parse.quote_plus(payload_kwargs_b64)}"
   resp = requests.get(bootstrapped_url).content
   Process(target=kill).start()
   return resp

@@ -17,26 +17,40 @@ from flask import Flask, Response, request, Request, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 
+# Any syntax forwards to be available in the global namespace
 pipe = pipe
 
-dictConfig(
-    {
-        "version": 1,
-        "formatters": {
-            "default": {
-                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-            }
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
-                "formatter": "default",
-            }
-        },
-        "root": {"level": "DEBUG", "handlers": ["console"]},
-    }
-)
+def configure_logging(verbosity: int = 0):
+    level = "INFO"
+    match verbosity:
+        case 0:
+            level = "WARNING"
+        case 1:
+            level = "INFO"
+        case 2:
+            level = "DEBUG"
+        case 3:
+            level = "DEBUG"
+
+    dictConfig(
+        {
+            "version": 1,
+            "formatters": {
+                "default": {
+                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+                }
+            },
+            "handlers": {
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                    "formatter": "default",
+                }
+            },
+            "root": {"level": level, "handlers": ["console"]},
+        }
+    )
+    logging.info(f"Setting verbosity/level to {verbosity}/{level}")
 
 parser = argparse.ArgumentParser(
     description="Owt - Lightweight endpoints for serving owt yer like"
@@ -54,6 +68,10 @@ parser.add_argument(
     default=os.environ.get("OWT_AUTH", None),
     help="Basic auth username:password_sha256. --auth for owt:owt",
 )
+v_group = parser.add_mutually_exclusive_group()
+v_group.add_argument("-v", action='store_true')
+v_group.add_argument("-vv", action='store_true')
+v_group.add_argument("-vvv", action='store_true')
 
 
 app = Flask(__name__)
@@ -316,10 +334,11 @@ def coerce_response(result: Any) -> ValidResponse:
             return make_response(json.dumps(result))
 
 
+@app.route("/", methods=["GET", "POST"])
 @app.route("/<path:path>", methods=["GET", "POST"])
 @app.route("/b64/<path:path>", methods=["GET", "POST"])
 @auth.login_required
-def unsafe_exec(path: str | None) -> ValidResponse:
+def unsafe_exec(path: str | None = None) -> ValidResponse:
     del path
     result = _run_unsafe_exec(request)
     return coerce_response(result)
@@ -362,16 +381,17 @@ def _run_unsafe_exec(request: Request) -> Any:
         return f"Error executing Unsafe code: {e}", 500
 
 
-def main():
+def main(port: int | None = None):
     try:
         args = parser.parse_args()
     except argparse.ArgumentError as e:
         logging.error(f"Error parsing arguments: {e}")
         sys.exit(1)
-
+    verbosity = max([level for (level, v) in enumerate([True, args.v, args.vv, args.vvv]) if v])
+    configure_logging(verbosity)
     Server.serve(
         address=args.address,
-        port=args.port,
+        port=port if port else args.port,
         auth=BasicAuth.maybe_single_user(args.auth),
     )
 

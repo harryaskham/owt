@@ -1,5 +1,6 @@
 from typing import Callable, Sequence, Hashable, Any, Optional
 import io
+import builtins
 from owt.summat.adaptor import Adaptor, Nullary, CallOut
 from owt.summat.functional import (
     F,
@@ -82,6 +83,11 @@ class Owt[**T, U](Adaptor[T, U]):
     def kwargs(self, **kwargs: T.kwargs) -> "Owt[T, U]":
         return self.to(Kwargs(**kwargs))
 
+    def kwarg[V](self, kwarg: str) -> "Owt[T, V]":
+        def f(__last__: U, **kwargs: V) -> V:
+            return kwargs[kwarg]
+        return self.f(f)
+
     def path(self) -> "Owt[T, list[str]]":
         return self.to(PathSource())
 
@@ -121,6 +127,16 @@ class Owt[**T, U](Adaptor[T, U]):
 
     def shell(self) -> "Owt[T, bytes]":
         return self.cast(str).to(Shell())
+
+    def bytes(self) -> "Owt[T, bytes]":
+        def cst(t: T) -> bytes:
+            match t:
+                case builtins.bytes():
+                    return t
+                case io.BytesIO():
+                    return t.getvalue()
+            return bytes(t)
+        return self.cast(cst)
 
     def map[V](self, f: Callable[[Any], V]) -> "Owt[T, Sequence[V]]":
         return self.cast(lambda u: isinstance(u, list) and u or []).f(

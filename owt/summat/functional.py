@@ -35,7 +35,7 @@ class Exec[**T, U](Adaptor[T, U]):
 
     def call(self, **kwargs: T.kwargs) -> CallOut[U]:
         self.f(**kwargs)
-        return Passthrough()
+        return Passthrough(kwargs["__last__"], kwargs)
 
 
 class Const[U](Adaptor[Any, U]):
@@ -47,8 +47,8 @@ class Const[U](Adaptor[Any, U]):
 
 
 class Identity[T](Adaptor[[T], T]):
-    def call(self, **_) -> CallOut[T]:
-        return Passthrough()
+    def call(self, **kwargs) -> CallOut[T]:
+        return Passthrough(kwargs["__last__"], kwargs)
 
 
 class Cond[**T, U, V](Adaptor[T, U | V]):
@@ -65,8 +65,8 @@ class Cond[**T, U, V](Adaptor[T, U | V]):
 
         def merge(u: CallOut[U] | CallOut[V]) -> CallOut[U | V]:
             match u:
-                case Passthrough():
-                    return Passthrough()
+                case Passthrough(l, kws):
+                    return Passthrough(l, kws)
                 case KeepKWs(value):
                     return KeepKWs(value)
                 case DropKWs(value):
