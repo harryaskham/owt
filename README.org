@@ -1,4 +1,4 @@
-# Created 2024-09-05 Thu 11:14
+# Created 2024-09-05 Thu 11:21
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -89,11 +89,11 @@ $ python -m owt.server
 Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
 
 #+begin_src python
-# adaptor.py (wrap once, call from anywhere)
+# lib/sota.py (wrap once, call from anywhere)
 
 from big.research.lab import fancy_ai
 
-def run(_, prompt):
+def hard_task(prompt):
     return fancy_ai.do_something(prompt)
 #+end_src
 
@@ -105,22 +105,22 @@ Which can be called from any language with a tiny client:
 main :: IO ()
 main = 
   mkOwtClient "http://localhost:9876/owt"
-    >>= owt @POST "f(lambda name: 'Hello {name}!')" "Haskell"
+    >>= owt @POST "f(sota.hard_task)" "solve AGI"
     >>= putBS
 #+end_src
 
 #+begin_src bash :noeval
 $ runhaskell owt.hs
 
-> "Hello Haskell!"
+> "AGI solved!"
 #+end_src
 
 The client-free version isn't very complex either:
 
-#+begin_src bash
+#+begin_src bash :noeval
 curl -G \
   --data-urlencode code_b64=$(cat adaptor.py | base64 -w 0) \
-  --data-urlencode kwargs_b64=$(echo "{'prompt':'output SOTA results'}") \
+  --data-urlencode kwargs_b64=$(echo "{'prompt':'solve AGI'}") \
   http://localhost:9876
 #+end_src
 *** Security
@@ -504,7 +504,6 @@ server_thread = Process(target=server.main, kwargs={"port": new_port})
   _locals['server_thread'].start()
   port = urllib.parse.urlparse("$URL_PORT").port
   new_url = "$URL_PORT".replace(str(port), str(new_port))
-  print(new_url)
   bootstrapped_url = f"{new_url}?code_b64={urllib.parse.quote_plus(payload_code_b64)}&kwargs_b64={urllib.parse.quote_plus(payload_kwargs_b64)}"
   resp = requests.get(bootstrapped_url).content
   Process(target=kill).start()
@@ -536,7 +535,7 @@ bash -c "$CMD"
 #+end_src
 
 #+results: 
-: Running: curl -G --data-urlencode code_b64=ZGVmIHJ1bigqKmt3YXJncyk6CiAgcGF5bG9hZF9jb2RlX2I2NCA9IGt3YXJnc1sncGF5bG9hZF9jb2RlX2I2NCddCiAgcGF5bG9hZF9rd2FyZ3NfYjY0ID0ga3dhcmdzWydwYXlsb2FkX2t3YXJnc19iNjQnXQogIGdsb2JhbCBfU0VSVkVSCiAgbmV3X3BvcnQgPSBfU0VSVkVSLnBvcnQgKyAxCiAgX2dsb2JhbHMgPSB7J19fbmFtZV9fJzogX19uYW1lX18rJ19uZXcnLAogICAgICAgICAgICAgICduZXdfcG9ydCc6IG5ld19wb3J0fQogIF9sb2NhbHMgPSB7fQogIHByaW50KCdnb2luZyBvbmUgbGV2ZWwgZG93biB0byBwb3J0ICVzJyAlIG5ld19wb3J0KQoKICBleGVjKCcnJwpwcmludCgnT25lIGxldmVsIGRlZXBlciwgaW1wb3J0aW5nIG93dCcpCmZyb20gb3d0IGltcG9ydCBzZXJ2ZXIKZnJvbSBtdWx0aXByb2Nlc3NpbmcgaW1wb3J0IFByb2Nlc3MKc2VydmVyX3RocmVhZCA9IFByb2Nlc3ModGFyZ2V0PXNlcnZlci5tYWluLCBrd2FyZ3M9eyJwb3J0IjogbmV3X3BvcnR9KQonJycsIF9nbG9iYWxzLCBfbG9jYWxzKQoKICBkZWYga2lsbCgpOgogICAgaW1wb3J0IHRpbWUKICAgIHRpbWUuc2xlZXAoNSkKICAgIHByaW50KCdLaWxsaW5nIHNlcnZlciBvbiAlcycgJSBTZXJ2ZXIuc2luZygpLnBvcnQpCiAgICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10udGVybWluYXRlKCkKICAgIHByaW50KCdLaWxsZWQgc2VydmVyIG9uICVkJyAlIFNlcnZlci5zaW5nKCkucG9ydCkKCiAgZnJvbSBtdWx0aXByb2Nlc3NpbmcgaW1wb3J0IFByb2Nlc3MKICBmcm9tIGZsYXNrIGltcG9ydCByZXF1ZXN0CiAgaW1wb3J0IHJlcXVlc3RzCiAgaW1wb3J0IHVybGxpYgoKICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10uc3RhcnQoKQogIHBvcnQgPSB1cmxsaWIucGFyc2UudXJscGFyc2UoImh0dHA6Ly9sb2NhbGhvc3Q6OTg3Ni9vd3QiKS5wb3J0CiAgbmV3X3VybCA9ICJodHRwOi8vbG9jYWxob3N0Ojk4NzYvb3d0Ii5yZXBsYWNlKHN0cihwb3J0KSwgc3RyKG5ld19wb3J0KSkKICBwcmludChuZXdfdXJsKQogIGJvb3RzdHJhcHBlZF91cmwgPSBmIntuZXdfdXJsfT9jb2RlX2I2ND17dXJsbGliLnBhcnNlLnF1b3RlX3BsdXMocGF5bG9hZF9jb2RlX2I2NCl9Jmt3YXJnc19iNjQ9e3VybGxpYi5wYXJzZS5xdW90ZV9wbHVzKHBheWxvYWRfa3dhcmdzX2I2NCl9IgogIHJlc3AgPSByZXF1ZXN0cy5nZXQoYm9vdHN0cmFwcGVkX3VybCkuY29udGVudAogIFByb2Nlc3ModGFyZ2V0PWtpbGwpLnN0YXJ0KCkKICByZXR1cm4gcmVzcAo= --data-urlencode kwargs_b64=eyJwYXlsb2FkX2NvZGVfYjY0IjoiSXlCbGVHRnRjR3hsTDJWamFHOHZaV05vYnk1d2VRb0tabkp2YlNCdmQzUXVjMlZ5ZG1WeUlHbHRjRzl5ZENCVFpYSjJaWElLQ2dwa1pXWWdjblZ1S0c1aGJXVTlUbTl1WlNrNkNpQWdJQ0J5WlhSMWNtNGdaaUpJWld4c2J5d2dlMjVoYldWOUxDQm1jbTl0SUh0VFpYSjJaWEl1YzJsdVp5Z3BMbUZrWkhKbGMzTjlPbnRUWlhKMlpYSXVjMmx1WnlncExuQnZjblI5SVNJSyIsICJwYXlsb2FkX2t3YXJnc19iNjQiOiAiZXlkdVlXMWxKem9nSjI5M2RDMXBibk5wWkdVdGIzZDBKMzBLIn0K http://localhost:9876/owt
+: Running: curl -G --data-urlencode code_b64=ZGVmIHJ1bigqKmt3YXJncyk6CiAgcGF5bG9hZF9jb2RlX2I2NCA9IGt3YXJnc1sncGF5bG9hZF9jb2RlX2I2NCddCiAgcGF5bG9hZF9rd2FyZ3NfYjY0ID0ga3dhcmdzWydwYXlsb2FkX2t3YXJnc19iNjQnXQogIGdsb2JhbCBfU0VSVkVSCiAgbmV3X3BvcnQgPSBfU0VSVkVSLnBvcnQgKyAxCiAgX2dsb2JhbHMgPSB7J19fbmFtZV9fJzogX19uYW1lX18rJ19uZXcnLAogICAgICAgICAgICAgICduZXdfcG9ydCc6IG5ld19wb3J0fQogIF9sb2NhbHMgPSB7fQogIHByaW50KCdnb2luZyBvbmUgbGV2ZWwgZG93biB0byBwb3J0ICVzJyAlIG5ld19wb3J0KQoKICBleGVjKCcnJwpwcmludCgnT25lIGxldmVsIGRlZXBlciwgaW1wb3J0aW5nIG93dCcpCmZyb20gb3d0IGltcG9ydCBzZXJ2ZXIKZnJvbSBtdWx0aXByb2Nlc3NpbmcgaW1wb3J0IFByb2Nlc3MKc2VydmVyX3RocmVhZCA9IFByb2Nlc3ModGFyZ2V0PXNlcnZlci5tYWluLCBrd2FyZ3M9eyJwb3J0IjogbmV3X3BvcnR9KQonJycsIF9nbG9iYWxzLCBfbG9jYWxzKQoKICBkZWYga2lsbCgpOgogICAgaW1wb3J0IHRpbWUKICAgIHRpbWUuc2xlZXAoNSkKICAgIHByaW50KCdLaWxsaW5nIHNlcnZlciBvbiAlcycgJSBTZXJ2ZXIuc2luZygpLnBvcnQpCiAgICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10udGVybWluYXRlKCkKICAgIHByaW50KCdLaWxsZWQgc2VydmVyIG9uICVkJyAlIFNlcnZlci5zaW5nKCkucG9ydCkKCiAgZnJvbSBtdWx0aXByb2Nlc3NpbmcgaW1wb3J0IFByb2Nlc3MKICBmcm9tIGZsYXNrIGltcG9ydCByZXF1ZXN0CiAgaW1wb3J0IHJlcXVlc3RzCiAgaW1wb3J0IHVybGxpYgoKICBfbG9jYWxzWydzZXJ2ZXJfdGhyZWFkJ10uc3RhcnQoKQogIHBvcnQgPSB1cmxsaWIucGFyc2UudXJscGFyc2UoImh0dHA6Ly9sb2NhbGhvc3Q6OTg3Ni9vd3QiKS5wb3J0CiAgbmV3X3VybCA9ICJodHRwOi8vbG9jYWxob3N0Ojk4NzYvb3d0Ii5yZXBsYWNlKHN0cihwb3J0KSwgc3RyKG5ld19wb3J0KSkKICBib290c3RyYXBwZWRfdXJsID0gZiJ7bmV3X3VybH0/Y29kZV9iNjQ9e3VybGxpYi5wYXJzZS5xdW90ZV9wbHVzKHBheWxvYWRfY29kZV9iNjQpfSZrd2FyZ3NfYjY0PXt1cmxsaWIucGFyc2UucXVvdGVfcGx1cyhwYXlsb2FkX2t3YXJnc19iNjQpfSIKICByZXNwID0gcmVxdWVzdHMuZ2V0KGJvb3RzdHJhcHBlZF91cmwpLmNvbnRlbnQKICBQcm9jZXNzKHRhcmdldD1raWxsKS5zdGFydCgpCiAgcmV0dXJuIHJlc3AK --data-urlencode kwargs_b64=eyJwYXlsb2FkX2NvZGVfYjY0IjoiSXlCbGVHRnRjR3hsTDJWamFHOHZaV05vYnk1d2VRb0tabkp2YlNCdmQzUXVjMlZ5ZG1WeUlHbHRjRzl5ZENCVFpYSjJaWElLQ2dwa1pXWWdjblZ1S0c1aGJXVTlUbTl1WlNrNkNpQWdJQ0J5WlhSMWNtNGdaaUpJWld4c2J5d2dlMjVoYldWOUxDQm1jbTl0SUh0VFpYSjJaWEl1YzJsdVp5Z3BMbUZrWkhKbGMzTjlPbnRUWlhKMlpYSXVjMmx1WnlncExuQnZjblI5SVNJSyIsICJwYXlsb2FkX2t3YXJnc19iNjQiOiAiZXlkdVlXMWxKem9nSjI5M2RDMXBibk5wWkdVdGIzZDBKMzBLIn0K http://localhost:9876/owt
 : Result:
 : Hello, owt-inside-owt, from 0.0.0.0:9877!
 
@@ -596,11 +595,11 @@ Result:  Hello, owt-inside-owt, from 0.0.0.0:9877!
 layer: owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9878!
 layer: owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9879!
+Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9879): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dCJ9Cg%3D%3D (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a632c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9880!
+Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9880): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dC1pbnNpZGUtb3d0In0K (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a80cb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9881!
+Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9881): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QifQo%3D (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a81160>: Failed to establish a new connection: [Errno 111] Connection refused'))
 #+end_example
 
 Hoo boy. How is Python a real language.

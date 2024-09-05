@@ -56,11 +56,11 @@ $ python -m owt.server
 Now you can call ~localhost:9876/arbitrary/path~ with any behaviour via a thin Python adaptor:
 
 #+BEGIN_SRC python
-# adaptor.py (wrap once, call from anywhere)
+# lib/sota.py (wrap once, call from anywhere)
 
 from big.research.lab import fancy_ai
 
-def run(_, prompt):
+def hard_task(prompt):
     return fancy_ai.do_something(prompt)
 #+END_SRC
 
@@ -72,22 +72,22 @@ Which can be called from any language with a tiny client:
 main :: IO ()
 main = 
   mkOwtClient "http://localhost:9876/owt"
-    >>= owt @POST "f(lambda name: 'Hello {name}!')" "Haskell"
+    >>= owt @POST "f(sota.hard_task)" "solve AGI"
     >>= putBS
 #+END_SRC
 
 #+BEGIN_SRC bash :noeval
 $ runhaskell owt.hs
 
-> "Hello Haskell!"
+> "AGI solved!"
 #+END_SRC
 
 The client-free version isn't very complex either:
 
-#+BEGIN_SRC bash
+#+BEGIN_SRC bash :noeval
 curl -G \
   --data-urlencode code_b64=$(cat adaptor.py | base64 -w 0) \
-  --data-urlencode kwargs_b64=$(echo "{'prompt':'output SOTA results'}") \
+  --data-urlencode kwargs_b64=$(echo "{'prompt':'solve AGI'}") \
   http://localhost:9876
 #+END_SRC
 
