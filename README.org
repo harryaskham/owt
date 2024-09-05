@@ -1,4 +1,4 @@
-# Created 2024-09-05 Thu 11:21
+# Created 2024-09-05 Thu 11:22
 #+title: 
 #+author: Harry Askham
 * Owt
@@ -595,11 +595,11 @@ Result:  Hello, owt-inside-owt, from 0.0.0.0:9877!
 layer: owt-inside-owt-inside-owt
 Result:  Hello, owt-inside-owt-inside-owt, from 0.0.0.0:9878!
 layer: owt-inside-owt-inside-owt-inside-owt
-Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9879): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dCJ9Cg%3D%3D (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a632c0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9879!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9880): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dC1pbnNpZGUtb3d0In0K (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a80cb0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9880!
 layer: owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt
-Result:  Error executing Unsafe code: Error executing Unsafe code: HTTPConnectionPool(host='localhost', port=9881): Max retries exceeded with url: /owt?code_b64=IyBleGFtcGxlL2VjaG8vZWNoby5weQoKZnJvbSBvd3Quc2VydmVyIGltcG9ydCBTZXJ2ZXIKCgpkZWYgcnVuKG5hbWU9Tm9uZSk6CiAgICByZXR1cm4gZiJIZWxsbywge25hbWV9LCBmcm9tIHtTZXJ2ZXIuc2luZygpLmFkZHJlc3N9OntTZXJ2ZXIuc2luZygpLnBvcnR9ISIK&kwargs_b64=eyJuYW1lIjogIm93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QtaW5zaWRlLW93dC1pbnNpZGUtb3d0LWluc2lkZS1vd3QifQo%3D (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7ffff4a81160>: Failed to establish a new connection: [Errno 111] Connection refused'))
+Result:  Hello, owt-inside-owt-inside-owt-inside-owt-inside-owt-inside-owt, from 0.0.0.0:9881!
 #+end_example
 
 Hoo boy. How is Python a real language.
