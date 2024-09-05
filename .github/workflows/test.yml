@@ -21,6 +21,6 @@ jobs:
           pip install -r requirements.dev.txt
           pip install -r requirements.bark.txt
           python -c "import nltk; nltk.download('punkt')"
+          mypy --install-types
           pip install -e .
-          yes | mypy --install-types
-          python -m pytest
+          make test
