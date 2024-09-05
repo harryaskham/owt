@@ -106,6 +106,33 @@ def test_hello_world_path_last(client: FlaskClient):
     )
 
 
+def test_implicit_done_for_pipe(client: FlaskClient):
+    assert_owt_exec(
+        client,
+        expected="Hello World!",
+        code="""run = pipe().path().f(lambda names: f"Hello {names[0]}!")""",
+        path="/World",
+    )
+
+
+def test_implicit_run_for_pipe(client: FlaskClient):
+    assert_owt_exec(
+        client,
+        expected="Hello World!",
+        code="""pipe().path().f(lambda names: f"Hello {names[0]}!")""",
+        path="/World",
+    )
+
+
+def test_implicit_terse_run_for_pipe(client: FlaskClient):
+    assert_owt_exec(
+        client,
+        expected="Hello World!",
+        code="""path().f(lambda names: f"Hello {names[0]}!")""",
+        path="/World",
+    )
+
+
 def test_const_string(client: FlaskClient):
     assert_owt_exec(client, expected="abc", code="""run = pipe().const("abc").done()""")
 

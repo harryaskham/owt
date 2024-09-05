@@ -282,34 +282,76 @@ class Unsafe:
             logging.error("Failed to parse Unsafe from GET data")
             raise e
 
-    def lines(self, indent: int = 0) -> list[str]:
-        return [" " * indent + line for line in self.code.split("\n")]
+    def lines(self, indent: int = 0, prefix: str = "") -> list[str]:
+        ls = self.code.split("\n")
+        ls[0] = prefix + ls[0]
+        return [" " * indent + line for line in ls]
 
-    def code_indented(self, indent: int) -> str:
-        return "\n".join(self.lines(indent=indent))
+    def code_indented(self, indent: int, prefix: str = "") -> str:
+        return "\n".join(self.lines(indent=indent, prefix=prefix))
 
-    def unsafe_exec_fn[**T](self) -> Callable[T, Any]:
-        _globals = globals()
-        _locals = locals()
-        code = f"""
+    def explicit_run_code(self) -> str:
+        return f"""
 from owt import *
 
 {self.code}
 """
-        logging.info("Running code:\n\n%s", code)
-        try:
-            exec(code, _globals, _locals)
-        except Exception as e:
-            raise RuntimeError(f"Error compiling Unsafe code: {e}\n\n{code}")
-        run_fn = _locals.get(self.fn_name) or _globals.get(self.fn_name)
-        if not run_fn:
-            raise ValueError(f"No '{self.fn_name}' method defined in code")
-        return run_fn
+
+    def implicit_run_code(self) -> str:
+        return f"""
+from owt import *
+
+{self.fn_name} = (
+{self.code_indented(4)}
+)
+"""
+
+    def implicit_terse_run_code(self) -> str:
+        return f"""
+from owt import *
+
+{self.fn_name} = (
+    pipe()
+{self.code_indented(4, prefix=".")}
+)
+"""
+
+    def unsafe_exec_fn[**T](self) -> Callable[T, Any] | adaptor.Adaptor[T, Any]:
+        def exec_code(code: str) -> Callable[T, Any] | adaptor.Adaptor[T, Any] | None:
+            _globals, _locals = globals(), locals()
+            logging.info("Running code:\n\n%s", code)
+            try:
+                exec(code, _globals, _locals)
+            except Exception as e:
+                logging.debug(f"Error compiling Unsafe code: {e}\n\n{code}")
+                return None
+            return _locals.get(self.fn_name) or _globals.get(self.fn_name)
+
+        for mode, code_fn in [
+            ("explicit", self.explicit_run_code),
+            ("implicit", self.implicit_run_code),
+            ("implicit_terse", self.implicit_terse_run_code),
+        ]:
+            run_fn = exec_code(code_fn())
+            if run_fn:
+                logging.info(f"Valid '{self.fn_name}' method defined in {mode} code")
+                return run_fn
+            logging.info(f"No '{self.fn_name}' method defined in {mode} code")
+
+        raise RuntimeError(f"No '{self.fn_name}' method defined in any mode")
 
     def unsafe_exec(self) -> Any:
         logging.info("Running with kwargs: %s", self.kwargs)
         try:
-            return self.unsafe_exec_fn()(**self.kwargs)
+            f_parsed: adaptor.Adaptor[Any, Any] | Callable[..., Any] = (
+                self.unsafe_exec_fn()
+            )
+            match f_parsed:
+                case adaptor.Adaptor():
+                    f = f_parsed.done()
+                case _:
+                    f = f_parsed
+            return f(**self.kwargs)
         except Exception as e:
             t = traceback.format_exc()
             logging.error(f"Error executing Unsafe code: {e}\n\n{t}")
