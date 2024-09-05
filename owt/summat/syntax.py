@@ -84,7 +84,7 @@ class Owt[**T, U](Adaptor[T, U]):
         return self.to(Kwargs(**kwargs))
 
     def kwarg[V](self, kwarg: str) -> "Owt[T, V]":
-        def f(__last__: U, **kwargs: V) -> V:
+        def f(__last__: U | None = None, **kwargs: V) -> V:
             return kwargs[kwarg]
 
         return self.f(f)

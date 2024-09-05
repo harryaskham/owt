@@ -334,9 +334,9 @@ from owt import *
         ]:
             run_fn = exec_code(code_fn())
             if run_fn:
-                logging.info(f"Valid '{self.fn_name}' method defined in {mode} code")
+                logging.debug(f"Valid '{self.fn_name}' method defined in {mode} code")
                 return run_fn
-            logging.info(f"No '{self.fn_name}' method defined in {mode} code")
+            logging.debug(f"No '{self.fn_name}' method defined in {mode} code")
 
         raise RuntimeError(f"No '{self.fn_name}' method defined in any mode")
 

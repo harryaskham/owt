@@ -243,6 +243,10 @@ run = pipe().clear().f(lambda _: "no kwargs").done()
     )
 
 
+def test_single_kwarg(client: FlaskClient):
+    assert_owt_exec(client, expected="1", args={"x": 1}, code="""kwarg("x")""")
+
+
 def test_kwargs_unused_args(client: FlaskClient):
     assert_owt_exec(
         client,

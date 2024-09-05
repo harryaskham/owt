@@ -1,10 +1,9 @@
 # example/meta/bootstrap.sh
 
 function owtInOwt() {
-  URL="$1"
-  PORT="$2"
-  PAYLOAD_CODE_B64="$3"
-  PAYLOAD_KWARGS_B64="$4"
+  URL_PORT="$1"
+  PAYLOAD_CODE_B64="$2"
+  PAYLOAD_KWARGS_B64="$3"
   read -r -d '' CODE << EOF
 def run(**kwargs):
   payload_code_b64 = kwargs['payload_code_b64']
@@ -36,7 +35,9 @@ server_thread = Process(target=server.main, kwargs={"port": new_port})
   import urllib
 
   _locals['server_thread'].start()
-  bootstrapped_url = f"$URL:{new_port}/{request.path}?code_b64={urllib.parse.quote_plus(payload_code_b64)}&kwargs_b64={urllib.parse.quote_plus(payload_kwargs_b64)}"
+  port = urllib.parse.urlparse("$URL_PORT").port
+  new_url = "$URL_PORT".replace(str(port), str(new_port))
+  bootstrapped_url = f"{new_url}?code_b64={urllib.parse.quote_plus(payload_code_b64)}&kwargs_b64={urllib.parse.quote_plus(payload_kwargs_b64)}"
   resp = requests.get(bootstrapped_url).content
   Process(target=kill).start()
   return resp
@@ -44,6 +45,6 @@ EOF
 
   CODE_B64=$(base64 -w 0 <<< "$CODE")
   KWARGS_B64=$(base64 -w 0 <<< "{\"payload_code_b64\":\"$PAYLOAD_CODE_B64\", \"payload_kwargs_b64\": \"$PAYLOAD_KWARGS_B64\"}")
-  CMD="curl -G --data-urlencode code_b64=$CODE_B64 --data-urlencode kwargs_b64=$KWARGS_B64 $URL:$PORT"
+  CMD="curl -G --data-urlencode code_b64=$CODE_B64 --data-urlencode kwargs_b64=$KWARGS_B64 $URL_PORT"
   echo $CMD
 }
