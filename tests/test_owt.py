@@ -117,7 +117,7 @@ def test_const_int(client: FlaskClient):
 def test_const_object(client: FlaskClient):
     assert_owt_exec(
         client,
-        expected='{"x": 123, "y": "abc"}',
+        expected='{"x":123,"y":"abc"}\n',
         code="""
 class Obj(dict):
     def __init__(self, x: int, y: str):

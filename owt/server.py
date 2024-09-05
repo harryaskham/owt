@@ -320,27 +320,30 @@ type ValidResponse = str | bytes | Response | types.GeneratorType | tuple[str, i
 
 
 def coerce_response(result: Any) -> ValidResponse:
-    if result is None:
-        return make_response("")
-
-    if hasattr(result, "__iter__"):
-        # Catch generators
-        return result
-
     match result:
+        case (a, b):
+            return coerce_response(a), b
         case Response():
-            return result
+            return make_response(result)
         case str():
             return make_response(result)
         case bytes():
             return make_response(result)
+        case int():
+            return make_response(str(result))
         case types.GeneratorType():
             return result
         case adaptor.Nullary():
             return make_response("")
+        case None:
+            return make_response("")
         case _:
-            logging.warning("Returning raw result")
-            return make_response(result)
+            if hasattr(result, "__iter__"):
+                # Catch generators
+                return result
+
+            logging.warning("Returning raw result as JSON")
+            return make_response(json.dumps(result))
 
 
 @app.route("/", methods=["GET", "POST"])
