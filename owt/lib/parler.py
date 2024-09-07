@@ -8,8 +8,9 @@ def run(
     import io
     import base64
     import torch
-    from parler_tts import ParlerTTSForConditionalGeneration
+    from parler_tts import ParlerTTSForConditionalGeneration, ParlerTTSStreamer
     from transformers import AutoTokenizer
+    from threading import Thread
     import soundfile as sf
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -17,12 +18,7 @@ def run(
     model = ParlerTTSForConditionalGeneration.from_pretrained(model_name).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     sampling_rate = model.audio_encoder.config.sampling_rate
-
-    input_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
-    prompt_input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
-
-    generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
-    audio_arr = generation.cpu().numpy().squeeze()
+    frame_rate = model.audio_encoder.config.frame_rate
 
     def base64_wav(arr):
         buf = io.BytesIO()
@@ -30,15 +26,45 @@ def run(
         wav = buf.getvalue()
         return base64.b64encode(wav).decode("utf-8")
 
-    def stream():
-        yield "data: %s\n\n" % (
-            json.dumps(
-                {
-                    "chunk": base64_wav(audio_arr),
-                    "cumulative": base64_wav(audio_arr),
-                }
-            )
-        )
-        yield "data: [DONE]\n\n"
+    def generate(text, description, play_steps_in_s=0.5):
+        play_steps = int(frame_rate * play_steps_in_s)
+        streamer = ParlerTTSStreamer(model, device=device, play_steps=play_steps)
 
-    return stream(), {"Content-Type": "text/event-stream"}
+        inputs = tokenizer(description, return_tensors="pt").to(device)
+        prompt = tokenizer(text, return_tensors="pt").to(device)
+
+        generation_kwargs = dict(
+            input_ids=inputs.input_ids,
+            prompt_input_ids=prompt.input_ids,
+            attention_mask=inputs.attention_mask,
+            prompt_attention_mask=prompt.attention_mask,
+            streamer=streamer,
+            do_sample=True,
+            temperature=1.0,
+            min_new_tokens=10,
+        )
+
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
+
+        cumulative_audio = None
+        for new_audio in streamer:
+            if new_audio.shape[0] == 0:
+                break
+            print(f"Sample of length: {round(new_audio.shape[0] / sampling_rate, 4)} seconds")
+
+            if not cumulative_audio:
+                cumulative_audio = new_audio
+            else:
+                cumulative_audio = torch.cat([cumulative_audio, new_audio], dim=-1)
+
+            yield "data: %s\n\n" % (
+                json.dumps(
+                    {
+                        "chunk": base64_wav(new_audio),
+                        "cumulative": base64_wav(cumulative_audio),
+                    }
+                )
+            )
+
+    return generate(prompt, description, play_steps_in_s=0.5), {"Content-Type": "text/event-stream"}
