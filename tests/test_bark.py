@@ -39,8 +39,8 @@ def test_bark(
 
     stream = list(data)
     assert stream == [
-        'data: {"sentence": "wav1", "cumulative": "wav1"}\n\n',
-        'data: {"sentence": "wav2", "cumulative": "wav1wav2"}\n\n',
+        'data: {"chunk": "wav1", "cumulative": "wav1"}\n\n',
+        'data: {"chunk": "wav2", "cumulative": "wav1wav2"}\n\n',
         "data: [DONE]\n\n",
     ]
     assert extra_headers == {"Content-Type": "text/event-stream"}

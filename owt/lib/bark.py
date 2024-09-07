@@ -68,7 +68,7 @@ def run(
             yield "data: %s\n\n" % (
                 json.dumps(
                     {
-                        "sentence": base64_wav(wav_array),
+                        "chunk": base64_wav(wav_array),
                         "cumulative": base64_wav(full_wav_array),
                     }
                 )

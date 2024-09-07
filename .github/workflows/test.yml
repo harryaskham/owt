@@ -20,6 +20,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements.dev.txt
           pip install -r requirements.bark.txt
+          pip install -r requirements.parler.txt
           python -c "import nltk; nltk.download('punkt')"
           yes | mypy --install-types || true
           pip install -e .

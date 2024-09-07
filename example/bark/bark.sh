@@ -21,7 +21,7 @@ echo "Running $CMD"
 I=0
 for event in "$($CMD)"; do
   if [[ "$event" == "data: {"* ]]; then
-    WAV="$(echo -n "$event" | sed 's/data: //g' | jq '.sentence' | base64 -d)"
+    WAV="$(echo -n "$event" | sed 's/data: //g' | jq '.chunk' | base64 -d)"
     echo "$WAV" > "$OUTDIR/sentence$I.wav"
     I=$((I+1))
   fi

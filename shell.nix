@@ -28,6 +28,7 @@ in
       pip install -r requirements.dev.txt
     '' + (if full then ''
       pip install -r requirements.bark.txt
+      pip install -r requirements.parler.txt
       python -c "import nltk; nltk.download('punkt')"
     '' else '''') + ''
       pip install -e .
