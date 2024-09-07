@@ -2,7 +2,6 @@ def run(
     prompt: str = "",
     description: str = "A female speaker delivers a slightly expressive and animated speech with a moderate speed and pitch. The recording is of very high quality, with the speaker's voice sounding clear and very close up.",
     model_name: str = "parler-tts/parler-tts-mini-v1",
-    sample_rate: int = 22050,
 ):
 
     import json
@@ -17,6 +16,7 @@ def run(
 
     model = ParlerTTSForConditionalGeneration.from_pretrained(model_name).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    sampling_rate = model.audio_encoder.config.sampling_rate
 
     input_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
     prompt_input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
@@ -26,7 +26,7 @@ def run(
 
     def base64_wav(arr):
         buf = io.BytesIO()
-        sf.write(buf, arr, sample_rate, format="WAV")
+        sf.write(buf, arr, sampling_rate, format="WAV")
         wav = buf.getvalue()
         return base64.b64encode(wav).decode("utf-8")
 
