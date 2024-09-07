@@ -12,6 +12,7 @@ def run(
     from transformers import AutoTokenizer
     from threading import Thread
     import soundfile as sf
+    import numpy as np
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -53,10 +54,10 @@ def run(
                 break
             print(f"Sample of length: {round(new_audio.shape[0] / sampling_rate, 4)} seconds")
 
-            if not cumulative_audio:
+            if cumulative_audio is None:
                 cumulative_audio = new_audio
             else:
-                cumulative_audio = torch.cat([cumulative_audio, new_audio], dim=-1)
+                cumulative_audio = np.concatenate((cumulative_audio, new_audio))
 
             yield "data: %s\n\n" % (
                 json.dumps(
