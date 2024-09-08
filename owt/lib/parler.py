@@ -6,6 +6,25 @@ from transformers import AutoTokenizer, AutoFeatureExtractor, set_seed
 from threading import Thread
 import numpy as np
 import nltk  # type: ignore
+import dataclasses 
+
+
+_CACHE = None
+
+
+def compile_forward_pass(model, tokenizer, device, compile_mode):
+    print("Compiling forward pass...")
+    max_length = 50
+    model.generation_config.cache_implementation = "static"
+    model.forward = torch.compile(model.forward, mode=compile_mode)
+    print("Compiling complete, warming up...")
+    inputs = tokenizer("This is for compilation", return_tensors="pt", padding="max_length", max_length=max_length).to(device)
+    model_kwargs = {**inputs, "prompt_input_ids": inputs.input_ids, "prompt_attention_mask": inputs.attention_mask, }
+    n_steps = 1 if compile_mode == "default" else 2
+    for i in range(n_steps):
+        print(f"Running warmup step {i}")
+        _ = model.generate(**model_kwargs)
+    print("Warmup complete.")
 
 def run(
     prompt: str = "",
@@ -16,34 +35,35 @@ def run(
     temperature: float = 1.0,
     min_new_tokens: int = 10,
     do_sample: bool = True,
-    split_type: Literal["sentence", "none"] = "none",
-    batch_size: int = 2,
-    compile_mode: Literal["none", "default", "reduce-overhead"] = "reduce-overhead",
+    split_type: Literal["sentence", "none"] = "sentence",
+    batch_size: int = 1,
+    compile_mode: Literal["none", "default", "reduce-overhead"] = "default",
 ):
+    if compile_mode != "none" and attention != "eager":
+        print("Compilation only supports eager, overriding attention to eager.")
+        attention = "eager"
+
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = ParlerTTSForConditionalGeneration.from_pretrained(
-        model_name,
-        torch_dtype=torch.bfloat16,
-        attn_implementation=attention).to(device, dtype=torch.bfloat16)
+    print(f"Using device: {device}")
 
-    if compile_mode != "none":
-        max_length = 50
-
-        model.attn_implementation = "eager"
-        model.generation_config.cache_implementation = "static"
-        model.forward = torch.compile(model.forward, mode=compile_mode)
-        inputs = tokenizer("This is for compilation", return_tensors="pt", padding="max_length", max_length=max_length).to(device)
-        model_kwargs = {**inputs, "prompt_input_ids": inputs.input_ids, "prompt_attention_mask": inputs.attention_mask, }
-        n_steps = 1 if compile_mode == "default" else 2
-        for _ in range(n_steps):
-            _ = model.generate(**model_kwargs)
-
-        model.attn_implementation = attention
+    global _CACHE
+    if compile_mode != "none" and _CACHE is not None:
+        print("Using cached model/tokenizer.")
+        model, tokenizer = _CACHE
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = ParlerTTSForConditionalGeneration.from_pretrained(
+            model_name,
+            torch_dtype=torch.bfloat16,
+            attn_implementation=attention).to(device, dtype=torch.bfloat16)
+        if compile_mode != "none":
+            compile_forward_pass(model, tokenizer, device, compile_mode)
+            _CACHE = model, tokenizer
+            print("Compiled model/tokenizer cached.")
 
     match split_type:
         case "sentence":
-            def generate(prompt, description):
+            def generate(prompt, description, **_):
                 clean_prompt = prompt.replace("\n", " ").strip()
                 all_prompts = nltk.sent_tokenize(clean_prompt)
                 all_descriptions = [description] * len(all_prompts)
@@ -51,6 +71,7 @@ def run(
                 for batch in range(0, len(all_prompts), batch_size):
                     prompts = all_prompts[batch:batch + batch_size]
                     descriptions = all_descriptions[batch:batch + batch_size]
+                    print("Generating for batch:", prompts)
 
                     inputs_batch = tokenizer(descriptions, return_tensors="pt", padding=True).to("cuda")
                     prompt_batch = tokenizer(prompts, return_tensors="pt", padding=True).to("cuda")
@@ -79,9 +100,11 @@ def run(
             return stream.response(generate, prompt, description)
 
         case "none":
-            def generate(text, description, play_steps_in_s):
+            def generate(prompt, description, **kwargs):
+                print("Generating for whole prompt:", prompt)
+                play_steps_in_s = kwargs["play_steps_in_s"]
                 inputs_batch = tokenizer(description, return_tensors="pt").to(device)
-                prompt_batch = tokenizer(text, return_tensors="pt").to(device)
+                prompt_batch = tokenizer(prompt, return_tensors="pt").to(device)
                 sampling_rate = model.audio_encoder.config.sampling_rate
                 frame_rate = model.audio_encoder.config.frame_rate
                 play_steps = int(frame_rate * play_steps_in_s)

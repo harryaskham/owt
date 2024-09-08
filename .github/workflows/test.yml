@@ -9,20 +9,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
+      - name: Install Nix
+        uses: nixbuild/nix-quick-install-action@v27
       - name: Run tests
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements.dev.txt
-          pip install -r requirements.bark.txt
-          pip install -r requirements.parler.txt
-          python -c "import nltk; nltk.download('punkt')"
-          yes | mypy --install-types || true
-          pip install flash-attn --no-build-isolation
-          pip install -e .
-          make test
+          nix-develop --command "make test"
