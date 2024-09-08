@@ -31,6 +31,7 @@ in
       pip install -r requirements.parler.txt
       python -c "import nltk; nltk.download('punkt')"
     '' else '''') + ''
+      pip install flash-attn --no-build-isolation
       pip install -e .
       yes | mypy --install-types
       zsh

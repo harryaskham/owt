@@ -1,5 +1,6 @@
 # lib/bark.py
 from typing import Literal
+from owt.lib import stream, encoding
 
 
 def run(
@@ -11,12 +12,8 @@ def run(
 ):
     import os
     import logging
-    import json
-    import io
     import nltk  # type: ignore
     import numpy as np
-    import base64
-    from scipy.io.wavfile import write as write_wav  # type: ignore
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     os.environ["SUNO_OFFLOAD_CPU"] = "0"
@@ -30,12 +27,6 @@ def run(
     from bark.api import semantic_to_waveform  # type: ignore
 
     preload_models()
-
-    def base64_wav(arr):
-        buf = io.BytesIO()
-        write_wav(buf, SAMPLE_RATE, arr)
-        wav = buf.getvalue()
-        return base64.b64encode(wav).decode("utf-8")
 
     def generate():
         clean_text = text.replace("\n", " ").strip()
@@ -65,14 +56,10 @@ def run(
                 else np.concatenate((full_wav_array, wav_array))
             )
 
-            yield "data: %s\n\n" % (
-                json.dumps(
-                    {
-                        "chunk": base64_wav(wav_array),
-                        "cumulative": base64_wav(full_wav_array),
-                    }
-                )
-            )
-        yield "data: [DONE]\n\n"
+            yield stream.event(
+                chunk=encoding.base64_wav(wav_array, SAMPLE_RATE),
+                cumulative=encoding.base64_wav(full_wav_array, SAMPLE_RATE))
 
-    return generate(), {"Content-Type": "text/event-stream"}
+        yield stream.done()
+
+    return stream.response(generate)

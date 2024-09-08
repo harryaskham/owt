@@ -23,5 +23,6 @@ jobs:
           pip install -r requirements.parler.txt
           python -c "import nltk; nltk.download('punkt')"
           yes | mypy --install-types || true
+          pip install flash-attn --no-build-isolation
           pip install -e .
           make test

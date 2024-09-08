@@ -259,9 +259,9 @@ class Unsafe:
             )
             return unsafe
         except Exception as e:
-            logging.error(e)
+            logging.debug(e)
             logging.debug(f"POST data: {request.data!r}")
-            logging.error(
+            logging.debug(
                 "Failed to parse Unsafe from JSON POST data, trying GET params"
             )
 
