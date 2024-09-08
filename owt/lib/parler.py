@@ -18,16 +18,31 @@ def run(
     do_sample: bool = True,
     split_type: Literal["sentence", "none"] = "none",
     batch_size: int = 2,
+    compile_mode: Literal["none", "default", "reduce-overhead"] = "reduce-overhead",
 ):
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = ParlerTTSForConditionalGeneration.from_pretrained(
+        model_name,
+        torch_dtype=torch.bfloat16,
+        attn_implementation=attention).to(device, dtype=torch.bfloat16)
+
+    if compile_mode != "none":
+        max_length = 50
+
+        model.attn_implementation = "eager"
+        model.generation_config.cache_implementation = "static"
+        model.forward = torch.compile(model.forward, mode=compile_mode)
+        inputs = tokenizer("This is for compilation", return_tensors="pt", padding="max_length", max_length=max_length).to(device)
+        model_kwargs = {**inputs, "prompt_input_ids": inputs.input_ids, "prompt_attention_mask": inputs.attention_mask, }
+        n_steps = 1 if compile_mode == "default" else 2
+        for _ in range(n_steps):
+            _ = model.generate(**model_kwargs)
+
+        model.attn_implementation = attention
 
     match split_type:
         case "sentence":
-            model = ParlerTTSForConditionalGeneration.from_pretrained(
-                model_name,
-                attn_implementation=attention).to(device)
-
             def generate(prompt, description):
                 clean_prompt = prompt.replace("\n", " ").strip()
                 all_prompts = nltk.sent_tokenize(clean_prompt)
@@ -53,7 +68,7 @@ def run(
                     )
 
                     for i in range(len(prompts)):
-                        new_audio = generation.sequences[i, :generation.audios_length[i]].cpu().numpy().squeeze()
+                        new_audio = generation.sequences[i, :generation.audios_length[i]].cpu().float().numpy().squeeze()
                         cumulative_audio = np.concatenate((cumulative_audio, new_audio))
                         yield stream.event(
                             chunk=encoding.base64_wav(new_audio, sampling_rate),
@@ -64,15 +79,11 @@ def run(
             return stream.response(generate, prompt, description)
 
         case "none":
-            model = ParlerTTSForConditionalGeneration.from_pretrained(
-                model_name,
-                attn_implementation="sdpa").to(device, dtype=torch.bfloat16)
-            frame_rate = model.audio_encoder.config.frame_rate
-
             def generate(text, description, play_steps_in_s):
                 inputs_batch = tokenizer(description, return_tensors="pt").to(device)
                 prompt_batch = tokenizer(text, return_tensors="pt").to(device)
                 sampling_rate = model.audio_encoder.config.sampling_rate
+                frame_rate = model.audio_encoder.config.frame_rate
                 play_steps = int(frame_rate * play_steps_in_s)
                 streamer = ParlerTTSStreamer(model, device=device, play_steps=play_steps)
                 generation_kwargs = dict(
