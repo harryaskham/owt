@@ -68,4 +68,4 @@ def run(
                 )
             )
 
-    return generate(prompt, description, play_steps_in_s=0.5), {"Content-Type": "text/event-stream"}
+    return generate(prompt, description, play_steps_in_s=5), {"Content-Type": "text/event-stream"}
