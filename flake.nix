@@ -10,23 +10,36 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-      in with pkgs; {
-        devShells = {
-          default = callPackage ./shell.nix { inherit pkgs; full = true; };
-          core = callPackage ./shell.nix { inherit pkgs; full = false; };
-        };
-        overlays = [
-          (final: prev: {
-            python3 = prev.python3.override {
-              packageOverrides = self: super: super // { owt = final.owt-lib; };
-            };
-            python3Packages = final.python3.pkgs;
-          })
-        ];
-        packages = rec {
-          owt-lib = callPackage ./default.nix { };
-          owt = python3Packages.toPythonApplication owt-lib;
-          default = owt;
-        };
-      });
+      in with pkgs;
+        let
+          args = {
+            pkgs = pkgs;
+            doCheck = false;
+            onWSL = false;
+            useCUDA = false;
+            useROCm = false;
+            enableBark = true;
+            enableParler = true;
+          };
+        in {
+          devShells = rec {
+            default = callPackage ./shell.nix args;
+            CUDA = callPackage ./shell.nix (args // { useCUDA = true; });
+            ROCm = callPackage ./shell.nix (args // { useROCm = true; });
+            wsl = callPackage ./shell.nix (args // { useCUDA = true; onWSL = true;});
+          };
+          overlays = [
+            (final: prev: {
+              python3 = prev.python3.override {
+                packageOverrides = self: super: super // { owt = final.owt-lib; };
+              };
+              python3Packages = final.python3.pkgs;
+            })
+          ];
+          packages = rec {
+            owt-lib = callPackage ./default.nix { };
+            owt = python3Packages.toPythonApplication owt-lib;
+            default = owt;
+          };
+        });
 }
