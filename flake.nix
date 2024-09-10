@@ -18,14 +18,16 @@
             onWSL = false;
             useCUDA = false;
             useROCm = false;
-            enableBark = true;
-            enableParler = true;
+            enableBark = false;
+            enableParler = false;
+            enableMeloTTS = false;
           };
         in {
           devShells = rec {
             default = callPackage ./shell.nix args;
             CUDA = callPackage ./shell.nix (args // { useCUDA = true; });
             ROCm = callPackage ./shell.nix (args // { useROCm = true; });
+            ROCm-MeloTTS = callPackage ./shell.nix (args // { useROCm = true; enableMeloTTS = true; });
             wsl = callPackage ./shell.nix (args // { useCUDA = true; onWSL = true;});
           };
           overlays = [

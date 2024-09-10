@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, useCUDA, useROCm, enableBark, enableParler }:
+{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, useCUDA, useROCm, enableBark, enableParler, enableMeloTTS }:
 
 with pkgs.lib;
 
@@ -6,9 +6,6 @@ let
   pythonPkgs = (ps: with ps; [
     virtualenv
   ]);
-  # ] ++ (optional useROCm (torch.override {rocmSupport = true;}))
-  #   ++ (optional useCUDA torch)
-  # );
   pythonEnv = pkgs.python3.withPackages pythonPkgs;
   cudaLibs = with pkgs; [
     cudaPackages.cudatoolkit
@@ -20,19 +17,19 @@ in pkgs.mkShell (
     NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
   } // {
     doCheck = doCheck;
-    buildInputs = with pkgs; [
+    buildInputs = with pkgs; ([
       pythonEnv
+      pkg-config
       jo
       jq
       libffi
       openssl
       stdenv.cc.cc
-      glibc
-      glibc.dev
       gcc.cc
       zlib
       zlib.dev
-    ] ++ optionals useCUDA cudaLibs;
+    ] ++ (optionals useCUDA cudaLibs)
+    ++ (optionals enableMeloTTS [rustc cargo mecab]));
     shellHook = ''
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH"
 
@@ -72,6 +69,13 @@ in pkgs.mkShell (
       # Without this, Triton tries nonexistent /sbin/ldconfig next
       export TRITON_LIBCUDA_PATH="$CUDA_PATH"
       export TRITON_LIBCUDART_PATH="$(pwd)/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
+    '' + optionalString enableMeloTTS ''
+      export RUSTFLAGS="-A invalid_reference_casting"  # needed for melotts+tokenizers
+      pip install -r requirements.melotts.txt
+      if [[ ! -d .venv/lib/python3.12/site-packages/unidic/dicdir ]]; then
+        python -m unidic download
+      fi
+      python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng')"
     '' + ''
       pip install -e .
       yes | mypy --install-types
