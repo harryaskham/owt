@@ -30,7 +30,7 @@ def run(
     prompt: str = "",
     description: str = "A female speaker delivers a slightly expressive and animated speech with a moderate speed and pitch. The recording is of very high quality, with the speaker's voice sounding clear and very close up.",
     model_name: str = "parler-tts/parler-tts-mini-v1",
-    attention: Literal["eager", "sdpa", "flash_attention_2"] = "flash_attention_2",
+    attention: Literal["eager", "sdpa", "flash_attention_2"] = "sdpa",
     chunk_secs: int = 5,
     temperature: float = 1.0,
     min_new_tokens: int = 10,
