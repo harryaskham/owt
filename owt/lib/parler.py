@@ -47,7 +47,7 @@ def run(
     print(f"Using device: {device}")
 
     global _CACHE
-    if compile_mode != "none" and _CACHE is not None:
+    if _CACHE is not None:
         print("Using cached model/tokenizer.")
         model, tokenizer, feature_extractor = _CACHE
     else:
@@ -59,8 +59,8 @@ def run(
             attn_implementation=attention).to(device, dtype=torch.bfloat16)
         if compile_mode != "none":
             compile_forward_pass(model, tokenizer, device, compile_mode)
-            _CACHE = model, tokenizer, feature_extractor
-            print("Compiled model/tokenizer cached.")
+        _CACHE = model, tokenizer, feature_extractor
+        print("Model/tokenizer/extractor cached.")
 
     match split_type:
         case "sentence":
