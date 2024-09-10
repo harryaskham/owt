@@ -14,7 +14,8 @@ def run(
     model = TTS(language='EN', device=device)
     speaker_ids = model.hps.data.spk2id
 
-    def generate(prompt):
+    def generate(prompts):
+        prompt = " ".join(prompts)
         buf = io.BytesIO()
         model.tts_to_file(prompt, speaker_ids[speaker], buf, speed=speed, format='wav')
         return stream.event(chunk=encoding.base64_buf(buf), cumulative="")
