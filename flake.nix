@@ -9,7 +9,7 @@
   outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs { system = system; config.allowUnfree = true; };
       in with pkgs;
         let
           args = {
@@ -26,6 +26,7 @@
           devShells = rec {
             default = callPackage ./shell.nix args;
             CUDA = callPackage ./shell.nix (args // { useCUDA = true; });
+            WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; useCUDA = true; enableMeloTTS = true; });
             ROCm = callPackage ./shell.nix (args // { useROCm = true; });
             ROCm-MeloTTS = callPackage ./shell.nix (args // { useROCm = true; enableMeloTTS = true; });
             wsl = callPackage ./shell.nix (args // { useCUDA = true; onWSL = true;});
