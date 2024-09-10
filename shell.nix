@@ -12,7 +12,7 @@ let
     linuxPackages.nvidia_x11
   ];
 in pkgs.mkShell (
-  optionalAttrs useCUDA {
+  optionalAttrs (useCUDA && !onWSL) {
     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath cudaLibs;
     NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
   } // {
