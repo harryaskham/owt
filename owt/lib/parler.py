@@ -47,19 +47,20 @@ def run(
     print(f"Using device: {device}")
 
     global _CACHE
-    if compile_mode != "none" and _CACHE is not None:
+    if _CACHE is not None:
         print("Using cached model/tokenizer.")
-        model, tokenizer = _CACHE
+        model, tokenizer, feature_extractor = _CACHE
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
+        feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
         model = ParlerTTSForConditionalGeneration.from_pretrained(
             model_name,
             torch_dtype=torch.bfloat16,
             attn_implementation=attention).to(device, dtype=torch.bfloat16)
         if compile_mode != "none":
             compile_forward_pass(model, tokenizer, device, compile_mode)
-            _CACHE = model, tokenizer
-            print("Compiled model/tokenizer cached.")
+        _CACHE = model, tokenizer, feature_extractor
+        print("Model/tokenizer/extractor cached.")
 
     match split_type:
         case "sentence":
@@ -75,7 +76,7 @@ def run(
 
                     inputs_batch = tokenizer(descriptions, return_tensors="pt", padding=True).to("cuda")
                     prompt_batch = tokenizer(prompts, return_tensors="pt", padding=True).to("cuda")
-                    sampling_rate = AutoFeatureExtractor.from_pretrained(model_name).sampling_rate
+                    sampling_rate = feature_extractor.sampling_rate
 
                     set_seed(0)
                     generation = model.generate(
