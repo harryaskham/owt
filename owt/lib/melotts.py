@@ -8,6 +8,7 @@ def run(
     speed: float = 1.0,
     speaker: str = 'EN-US',
     split_type: str = 'sentence',
+    batch_size: int = 1,
 ):
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
@@ -23,9 +24,9 @@ def run(
     def output():
         match split_type:
             case "sentence":
-                yield from tts.over_sentences(prompt, generate, batch_size=1)
+                yield from tts.over_sentences(prompt, generate, batch_size=batch_size)
             case "none":
-                yield generate(prompt)
+                yield generate([prompt])
         yield stream.done()
 
     return stream.response(output)
