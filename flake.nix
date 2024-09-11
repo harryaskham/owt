@@ -30,7 +30,7 @@
             ROCm = callPackage ./shell.nix (args // { useROCm = true; });
             ROCm-MeloTTS = callPackage ./shell.nix (args // { useROCm = true; enableMeloTTS = true; });
             wsl = callPackage ./shell.nix (args // { useCUDA = true; onWSL = true;});
-            ROCm-MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
+            MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
           };
           overlays = [
             (final: prev: {
