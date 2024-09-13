@@ -16,8 +16,7 @@
             pkgs = pkgs;
             doCheck = false;
             onWSL = false;
-            useCUDA = false;
-            useROCm = false;
+            acceleration = null;
             enableBark = false;
             enableParler = false;
             enableMeloTTS = false;
@@ -25,11 +24,12 @@
         in {
           devShells = rec {
             default = callPackage ./shell.nix args;
-            CUDA = callPackage ./shell.nix (args // { useCUDA = true; });
-            WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; useCUDA = true; enableMeloTTS = true; });
-            ROCm = callPackage ./shell.nix (args // { useROCm = true; });
-            ROCm-MeloTTS = callPackage ./shell.nix (args // { useROCm = true; enableMeloTTS = true; });
-            wsl = callPackage ./shell.nix (args // { useCUDA = true; onWSL = true;});
+            CUDA = callPackage ./shell.nix (args // { acceleration = "cuda"; });
+            CUDA-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; });
+            WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; acceleration = "cuda"; enableMeloTTS = true; });
+            ROCm = callPackage ./shell.nix (args // { acceleration = "rocm"; });
+            ROCm-MeloTTS = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMeloTTS = true; });
+            wsl = callPackage ./shell.nix (args // { acceleration = "cuda"; onWSL = true;});
             MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
           };
           overlays = [

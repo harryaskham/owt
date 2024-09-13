@@ -1,7 +1,7 @@
 import io
 import base64
 import soundfile as sf  # type: ignore
-import nltk
+import nltk  # type: ignore
 
 def base64_buf(buf):
     return base64.b64encode(buf.getvalue()).decode("utf-8")

@@ -1,6 +1,6 @@
 import torch
 import io
-from melo.api import TTS
+from melo.api import TTS  # type: ignore
 from owt.lib import stream, encoding, tts
 
 def run(

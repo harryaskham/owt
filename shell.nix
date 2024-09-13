@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, useCUDA, useROCm, enableBark, enableParler, enableMeloTTS }:
+{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, enableBark, enableParler, enableMeloTTS }:
 
 with pkgs.lib;
 
@@ -10,7 +10,12 @@ let
   cudaLibs = with pkgs; [
     cudaPackages.cudatoolkit
     linuxPackages.nvidia_x11
+    stdenv.cc.cc
+    stdenv.cc.cc.lib
   ];
+  useCUDA = acceleration == "cuda";
+  useROCm = acceleration == "rocm";
+  venv = if useCUDA then ".venv-cuda" else if useROCm then ".venv-rocm" else ".venv";
 in pkgs.mkShell (
   optionalAttrs (useCUDA && !onWSL) {
     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath cudaLibs;
@@ -25,15 +30,16 @@ in pkgs.mkShell (
       libffi
       openssl
       stdenv.cc.cc
+      stdenv.cc.cc.lib
       gcc.cc
       zlib
       zlib.dev
     ] ++ (optionals useCUDA cudaLibs)
     ++ (optionals enableMeloTTS [rustc cargo mecab]));
     shellHook = ''
-      export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH"
+      export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH:~/.nix-profile/lib"
 
-      VENV=.venv
+      VENV=${venv}
       if test ! -d $VENV; then
         python -m venv $VENV
       fi
@@ -46,6 +52,7 @@ in pkgs.mkShell (
       pip install -r requirements.txt
       pip install -r requirements.dev.txt
     '' + optionalString useCUDA ''
+      pip install torch torchvision torchaudio  # Regular packages support cuda
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH"
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$CUDA_PATH"
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/run/opengl-driver/lib"

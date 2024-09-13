@@ -1,4 +1,4 @@
-import nltk
+import nltk  # type: ignore
 
 def over_sentences(prompt, inference_fn, batch_size=1):
     clean_prompt = prompt.replace("\n", " ").strip()

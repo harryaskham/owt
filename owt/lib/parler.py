@@ -1,8 +1,8 @@
 from owt.lib import stream, encoding
 from typing import Literal
 import torch
-from parler_tts import ParlerTTSForConditionalGeneration, ParlerTTSStreamer
-from transformers import AutoTokenizer, AutoFeatureExtractor, set_seed
+from parler_tts import ParlerTTSForConditionalGeneration, ParlerTTSStreamer  # type: ignore
+from transformers import AutoTokenizer, AutoFeatureExtractor, set_seed  # type: ignore
 from threading import Thread
 import numpy as np
 import nltk  # type: ignore
