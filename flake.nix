@@ -20,12 +20,14 @@
             enableBark = false;
             enableParler = false;
             enableMeloTTS = false;
+            legacy = false;
           };
         in {
           devShells = rec {
             default = callPackage ./shell.nix args;
             CUDA = callPackage ./shell.nix (args // { acceleration = "cuda"; });
             CUDA-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; });
+            CUDA-legacy-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; legacy = true; });
             WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; acceleration = "cuda"; enableMeloTTS = true; });
             ROCm = callPackage ./shell.nix (args // { acceleration = "rocm"; });
             ROCm-MeloTTS = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMeloTTS = true; });
