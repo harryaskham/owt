@@ -1,7 +1,9 @@
 # lib/bark.py
 from typing import Literal
-from owt.lib import stream, encoding
-
+from owt.lib import stream, encoding, tts
+import os
+import logging
+import numpy as np
 
 def run(
     text: str = "",
@@ -9,12 +11,9 @@ def run(
     sentence_template: str = "%s",
     split_type: Literal["sentence", "none"] = "sentence",
     model_size: Literal["small", "large"] = "small",
+    batch_size: int = 1,
+    temperature: float = 0.6
 ):
-    import os
-    import logging
-    import nltk  # type: ignore
-    import numpy as np
-
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     os.environ["SUNO_OFFLOAD_CPU"] = "0"
     match model_size:
@@ -28,38 +27,40 @@ def run(
 
     preload_models()
 
-    def generate():
-        clean_text = text.replace("\n", " ").strip()
+    def output():
         match split_type:
             case "sentence":
-                sentences = nltk.sent_tokenize(clean_text)
+                yield from tts.over_sentences(text, batch, batch_size=batch_size)
             case "none":
-                sentences = [clean_text]
-        full_wav_array: np.ndarray | None = None
-        for i, raw_sentence in enumerate(sentences):
-            sentence = sentence_template % raw_sentence
-            logging.info(
-                "Generating sentence %d/%d: %s", i + 1, len(sentences), sentence
-            )
-            semantic_tokens: np.ndarray = generate_text_semantic(
-                sentence,
-                history_prompt=speaker,
-                temp=0.6,
-                min_eos_p=0.05,
-            )
-            wav_array: np.ndarray = semantic_to_waveform(
-                semantic_tokens, history_prompt=speaker
-            )
-            full_wav_array = (
-                wav_array
-                if full_wav_array is None
-                else np.concatenate((full_wav_array, wav_array))
-            )
-
-            yield stream.event(
-                chunk=encoding.base64_wav(wav_array, SAMPLE_RATE),
-                cumulative=encoding.base64_wav(full_wav_array, SAMPLE_RATE))
-
+                yield batch([text])
         yield stream.done()
 
-    return stream.response(generate)
+    full_wav_array: np.ndarray | None = None
+
+    def batch(sentences):
+        nonlocal full_wav_array
+        raw_sentence = " ".join(sentences)
+        sentence = sentence_template % raw_sentence
+        logging.info(
+            "Generating sentence: %s", sentence
+        )
+        semantic_tokens: np.ndarray = generate_text_semantic(
+            sentence,
+            history_prompt=speaker,
+            temp=temperature,
+            min_eos_p=0.05,
+        )
+        wav_array: np.ndarray = semantic_to_waveform(
+            semantic_tokens, history_prompt=speaker
+        )
+        full_wav_array = (
+            wav_array
+            if full_wav_array is None
+            else np.concatenate((full_wav_array, wav_array))
+        )
+
+        return stream.event(
+            chunk=encoding.base64_wav(wav_array, SAMPLE_RATE),
+            cumulative=encoding.base64_wav(full_wav_array, SAMPLE_RATE))
+
+    return stream.response(output)
