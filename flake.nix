@@ -27,6 +27,8 @@
             default = callPackage ./shell.nix args;
             CUDA = callPackage ./shell.nix (args // { acceleration = "cuda"; });
             CUDA-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; });
+            CUDA-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; });
+            WSL-CUDA-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; onWSL = true; });
             CUDA-legacy-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; legacy = true; });
             CUDA-legacy-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; legacy = true; });
             WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; acceleration = "cuda"; enableMeloTTS = true; });
