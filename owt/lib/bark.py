@@ -27,17 +27,9 @@ def run(
 
     preload_models()
 
-    def output():
-        match split_type:
-            case "sentence":
-                yield from tts.over_sentences(text, batch, batch_size=batch_size)
-            case "none":
-                yield batch([text])
-        yield stream.done()
-
     full_wav_array: np.ndarray | None = None
 
-    def batch(sentences):
+    def generate(sentences):
         nonlocal full_wav_array
         raw_sentence = " ".join(sentences)
         sentence = sentence_template % raw_sentence
@@ -62,5 +54,13 @@ def run(
         return stream.event(
             chunk=encoding.base64_wav(wav_array, SAMPLE_RATE),
             cumulative=encoding.base64_wav(full_wav_array, SAMPLE_RATE))
+
+    def output():
+        match split_type:
+            case "sentence":
+                yield from tts.over_sentences(text, generate, batch_size=batch_size)
+            case "none":
+                yield generate([text])
+        yield stream.done()
 
     return stream.response(output)
