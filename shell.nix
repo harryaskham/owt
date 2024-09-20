@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacy, enableBark, enableParler, enableMeloTTS }:
+{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacyCUDA, enableBark, enableParler, enableMeloTTS, enableMoshi }:
 
 with pkgs.lib;
 
@@ -35,7 +35,10 @@ in pkgs.mkShell (
       zlib
       zlib.dev
     ] ++ (optionals useCUDA cudaLibs)
-    ++ (optionals enableMeloTTS [rustc cargo mecab]));
+    ++ (optionals enableMeloTTS [rustc cargo mecab])
+    ++ (optionals enableBark [ffmpeg])
+    ++ (optionals enableMoshi [rustc cargo])
+    );
     shellHook = ''
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH:~/.nix-profile/lib"
 
@@ -46,14 +49,15 @@ in pkgs.mkShell (
         source ./$VENV/bin/activate
       '' + optionalString useROCm ''
         pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.1
-        export HIP_VISIBLE_DEVICES=0
+        export HIP_VISIBLE_DEVICES=0,1
+        export HCC_AMDGPU_TARGET=gfx1100
         export HSA_OVERRIDE_GFX_VERSION=11.0.0
       '' + ''
         pip install -r requirements.txt
         pip install -r requirements.dev.txt
       '' + optionalString useCUDA ''
 
-        ${if legacy # TITAN GTX
+        ${if legacyCUDA # TITAN GTX
         then ''pip install torch==2.2.0+cu121 torchvision==0.17.0+cu121 torchaudio==2.2.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html''
         else ''pip install torch torchvision torchaudio''}
 
@@ -69,11 +73,16 @@ in pkgs.mkShell (
       '' + optionalString (enableBark || enableParler) ''
         python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
       '' + optionalString enableBark ''
+        pip install -r requirements.tts.txt
         pip install -r requirements.bark.txt
       '' + optionalString enableParler ''
+        pip install -r requirements.tts.txt
         pip install -r requirements.parler.txt
         TORCH_LOGS="+dynamo"
         TORCHDYNAMO_VERBOSE=1
+      '' + optionalString enableMoshi ''
+        pip install -r requirements.tts.txt
+        pip install -r requirements.moshi.txt
       '' + optionalString (enableParler && useCUDA) ''
         # Flash attention compilation seems to require CUDA
         pip install flash-attn --no-build-isolation
@@ -82,14 +91,15 @@ in pkgs.mkShell (
         export TRITON_LIBCUDART_PATH="$(pwd)/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
       '' + optionalString enableMeloTTS ''
         export RUSTFLAGS="-A invalid_reference_casting"  # needed for melotts+tokenizers
+        pip install -r requirements.tts.txt
         pip install -r requirements.melotts.txt
         if [[ ! -d ./$VENV/lib/python3.12/site-packages/unidic/dicdir ]]; then
-        python -m unidic download
-      fi
-      python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng')"
-    '' + ''
-      pip install -e .
-      yes | mypy --install-types
-      zsh
-    '';
+          python -m unidic download
+        fi
+        python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng')"
+      '' + ''
+        pip install -e .
+        yes | mypy --install-types
+        zsh
+      '';
   })

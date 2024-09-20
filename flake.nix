@@ -20,7 +20,8 @@
             enableBark = false;
             enableParler = false;
             enableMeloTTS = false;
-            legacy = false;
+            enableMoshi = false;
+            legacyCUDA = false;
           };
         in {
           devShells = rec {
@@ -29,11 +30,13 @@
             CUDA-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; });
             CUDA-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; });
             WSL-CUDA-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; onWSL = true; });
-            CUDA-legacy-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; legacy = true; });
-            CUDA-legacy-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; legacy = true; });
+            CUDA-legacy-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; legacyCUDA = true; });
+            CUDA-legacy-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; legacyCUDA = true; });
             WSL-CUDA-MeloTTS = callPackage ./shell.nix (args // { onWSL = true; acceleration = "cuda"; enableMeloTTS = true; });
             ROCm = callPackage ./shell.nix (args // { acceleration = "rocm"; });
+            ROCm-bark = callPackage ./shell.nix (args // { acceleration = "rocm"; enableBark = true; });
             ROCm-MeloTTS = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMeloTTS = true; });
+            ROCm-moshi = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMoshi = true; });
             wsl = callPackage ./shell.nix (args // { acceleration = "cuda"; onWSL = true;});
             MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
           };
