@@ -12,7 +12,7 @@ def run(
     split_type: Literal["sentence", "none"] = "sentence",
     model_size: Literal["small", "large"] = "small",
     batch_size: int = 1,
-    temperature: float = 0.6
+    temperature: float = 0.6,
     cuda_device: int = 0
 ):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
