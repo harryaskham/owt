@@ -17,10 +17,14 @@ let
   useROCm = acceleration == "rocm";
   venv = if useCUDA then ".venv-cuda" else if useROCm then ".venv-rocm" else ".venv";
 in pkgs.mkShell (
+  (optionalAttrs (enableMoshi && !onWSL) {
+    NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.portaudio ];
+    NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
+  }) // (
   optionalAttrs (useCUDA && !onWSL) {
     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath cudaLibs;
     NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
-  } // {
+  }) // {
     doCheck = doCheck;
     buildInputs = with pkgs; ([
       pythonEnv
@@ -37,7 +41,7 @@ in pkgs.mkShell (
     ] ++ (optionals useCUDA cudaLibs)
     ++ (optionals enableMeloTTS [rustc cargo mecab])
     ++ (optionals enableBark [ffmpeg])
-    ++ (optionals enableMoshi [rustc cargo])
+    ++ (optionals enableMoshi [rustc cargo portaudio])
     );
     shellHook = ''
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH:~/.nix-profile/lib"
@@ -100,6 +104,5 @@ in pkgs.mkShell (
       '' + ''
         pip install -e .
         yes | mypy --install-types
-        zsh
       '';
   })
