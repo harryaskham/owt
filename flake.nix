@@ -26,6 +26,8 @@
         in {
           devShells = rec {
             default = callPackage ./shell.nix args;
+            bark-cpu = callPackage ./shell.nix (args // { acceleration = "cpu"; enableBark = true; });
+            # TODO: Autogenerate the below (pure flakes don't take arguments, need to run this across many different machines)
             CUDA = callPackage ./shell.nix (args // { acceleration = "cuda"; });
             CUDA-MeloTTS = callPackage ./shell.nix (args // { acceleration = "cuda"; enableMeloTTS = true; });
             CUDA-bark = callPackage ./shell.nix (args // { acceleration = "cuda"; enableBark = true; });

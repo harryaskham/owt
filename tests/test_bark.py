@@ -2,7 +2,6 @@ from owt.lib import bark
 from unittest import mock
 import numpy as np
 
-
 @mock.patch("bark.generation.preload_models")
 @mock.patch("bark.generation.generate_text_semantic")
 @mock.patch("bark.api.semantic_to_waveform")

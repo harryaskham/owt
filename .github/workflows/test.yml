@@ -13,4 +13,4 @@ jobs:
         uses: nixbuild/nix-quick-install-action@v27
       - name: Run tests
         run: |
-          nix-develop --command "make test"
+          nix-develop .#bark-cpu --command "make test"

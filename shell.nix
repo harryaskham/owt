@@ -15,7 +15,8 @@ let
   ];
   useCUDA = acceleration == "cuda";
   useROCm = acceleration == "rocm";
-  venv = if useCUDA then ".venv-cuda" else if useROCm then ".venv-rocm" else ".venv";
+  useCPU = acceleration == "cpu";
+  venv = if useCUDA then ".venv-cuda" else if useROCm then ".venv-rocm" else if useCPU then ".venv-cpu" else ".venv";
 in pkgs.mkShell (
   (optionalAttrs (enableMoshi && !onWSL) {
     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.portaudio ];
@@ -56,6 +57,8 @@ in pkgs.mkShell (
         export HIP_VISIBLE_DEVICES=0,1
         export HCC_AMDGPU_TARGET=gfx1100
         export HSA_OVERRIDE_GFX_VERSION=11.0.0
+      '' + optionalString useCPU ''
+        pip install torch torchvision torchaudio
       '' + ''
         pip install -r requirements.txt
         pip install -r requirements.dev.txt
