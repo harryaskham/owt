@@ -18,4 +18,4 @@ jobs:
       uses: nixbuild/nix-quick-install-action@v27
     - name: Check
       run: |
-        nix develop .#core --check
+        nix develop .#bark-cpu --check
