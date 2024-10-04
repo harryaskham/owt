@@ -38,6 +38,7 @@
             ROCm = callPackage ./shell.nix (args // { acceleration = "rocm"; });
             ROCm-bark = callPackage ./shell.nix (args // { acceleration = "rocm"; enableBark = true; });
             ROCm-MeloTTS = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMeloTTS = true; });
+            ROCm-parler = callPackage ./shell.nix (args // { acceleration = "rocm"; enableParler = true; });
             ROCm-moshi = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMoshi = true; });
             wsl = callPackage ./shell.nix (args // { acceleration = "cuda"; onWSL = true;});
             MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
