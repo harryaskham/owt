@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacyCUDA, enableBark, enableParler, enableMeloTTS, enableMoshi }:
+{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacyCUDA, enableBark, enableParler, enableMeloTTS, enableMoshi, enableXTTS }:
 
 with pkgs.lib;
 
@@ -43,6 +43,7 @@ in pkgs.mkShell (
     ++ (optionals enableMeloTTS [rustc cargo mecab])
     ++ (optionals enableBark [ffmpeg])
     ++ (optionals enableMoshi [rustc cargo portaudio])
+    ++ (optionals enableXTTS [rustc cargo mecab])
     );
     shellHook = ''
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$NIX_LD_LIBRARY_PATH:~/.nix-profile/lib"
@@ -90,6 +91,12 @@ in pkgs.mkShell (
       '' + optionalString enableMoshi ''
         pip install -r requirements.tts.txt
         pip install -r requirements.moshi.txt
+      '' + optionalString enableXTTS ''
+        pip install -r requirements.tts.txt
+        pip install -r requirements.xtts.txt
+        if [[ ! -d ./$VENV/lib/python3.12/site-packages/unidic/dicdir ]]; then
+          python -m unidic download
+        fi
       '' + optionalString (enableParler && useCUDA) ''
         # Flash attention compilation seems to require CUDA
         pip install flash-attn --no-build-isolation
