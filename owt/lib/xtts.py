@@ -1,7 +1,7 @@
 import torch
 import io
 from owt.lib import stream, encoding, tts
-from TTS.api import TTS
+from TTS.api import TTS  # type: ignore
 
 def run(
     prompt: str = "",

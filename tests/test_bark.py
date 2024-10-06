@@ -1,24 +1,26 @@
 from owt.lib import bark
+import io
 from unittest import mock
 import numpy as np
 
 @mock.patch("bark.generation.preload_models")
 @mock.patch("bark.generation.generate_text_semantic")
 @mock.patch("bark.api.semantic_to_waveform")
-@mock.patch("base64.b64encode")
-@mock.patch("scipy.io.wavfile.write")
+@mock.patch("owt.lib.encoding.base64_wav")
 @mock.patch("nltk.sent_tokenize")
 def test_bark(
     mock_sent_tokenize,
-    mock_wavwrite,
-    mock_b64encode,
+    mock_base64_wav,
     mock_semantic_to_waveform,
     mock_generate_text_semantic,
     mock_preload_models,
 ):
     mock_sent_tokenize.side_effect = lambda x: x.split(".")
-    mock_b64encode.side_effect = lambda x: x
-    mock_wavwrite.side_effect = lambda buf, _, arr: buf.write(arr)
+    def arr_to_buf(arr):
+        buf = io.BytesIO()
+        buf.write(arr)
+        return buf.getvalue().decode("utf-8")
+    mock_base64_wav.side_effect = lambda arr, _: arr_to_buf(arr)
     mock_wav_1 = mock.MagicMock()
     mock_wav_2 = mock.MagicMock()
     mock_tokens = {
