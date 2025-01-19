@@ -7,6 +7,13 @@ let
     virtualenv
   ]);
   pythonEnv = pkgs.python3.withPackages pythonPkgs;
+  rocmLibs = with pkgs; [
+    zlib
+    zlib.dev
+    zstd
+    stdenv.cc.cc
+    stdenv.cc.cc.lib
+  ];
   cudaLibs = with pkgs; [
     cudaPackages.cudatoolkit
     linuxPackages.nvidia_x11
@@ -24,6 +31,10 @@ in pkgs.mkShell (
   }) // (
   optionalAttrs (useCUDA && !onWSL) {
     NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath cudaLibs;
+    NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
+  }) // (
+  optionalAttrs (useROCm && !onWSL) {
+    NIX_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath rocmLibs;
     NIX_LD = with pkgs; lib.fileContents "${stdenv.cc}/nix-support/dynamic-linker";
   }) // {
     doCheck = doCheck;
