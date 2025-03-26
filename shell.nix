@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacyCUDA, enableBark, enableParler, enableMeloTTS, enableMoshi, enableXTTS }:
+{ pkgs ? import <nixpkgs> {}, doCheck, onWSL, acceleration, legacyCUDA, enableBark, enableParler, enableMeloTTS, enableMoshi, enableXTTS, enableOrpheus }:
 
 with pkgs.lib;
 
@@ -122,6 +122,9 @@ in pkgs.mkShell (
           python -m unidic download
         fi
         python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng')"
+      '' + optionalString enableOrpheus ''
+        pip install -r requirements.tts.txt
+        pip install -r requirements.orpheus.txt
       '' + ''
         pip install -e .
         yes | mypy --install-types

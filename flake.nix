@@ -22,6 +22,7 @@
             enableMeloTTS = false;
             enableMoshi = false;
             enableXTTS = false;
+            enableOrpheus = false;
             legacyCUDA = false;
           };
         in {
@@ -42,6 +43,7 @@
             ROCm-parler = callPackage ./shell.nix (args // { acceleration = "rocm"; enableParler = true; });
             ROCm-moshi = callPackage ./shell.nix (args // { acceleration = "rocm"; enableMoshi = true; });
             ROCm-XTTS = callPackage ./shell.nix (args // { acceleration = "rocm"; enableXTTS = true; });
+            ROCm-orpheus = callPackage ./shell.nix (args // { acceleration = "rocm"; enableOrpheus = true; });
             wsl = callPackage ./shell.nix (args // { acceleration = "cuda"; onWSL = true;});
             MeloTTS = callPackage ./shell.nix (args // { enableMeloTTS = true; });
           };
