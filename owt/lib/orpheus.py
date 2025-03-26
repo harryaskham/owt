@@ -1,4 +1,4 @@
-# lib/bark.py
+# tags: <laugh>, <chuckle>, <sigh>, <cough>, <sniffle>, <groan>, <yawn>, <gasp>.
 from typing import Literal
 from owt.lib import stream, encoding, tts
 import os
@@ -10,7 +10,8 @@ import time
 def run(
     text: str = "",
     model = OrpheusModel(model_name ="canopylabs/orpheus-tts-0.1-finetune-prod")
-    speaker: str = "v2/en_speaker_6",
+    speaker: Literal["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"] = "tara".
+    repetition_penalty: float = 1.1,
     sentence_template: str = "%s",
     split_type: Literal["sentence", "none"] = "sentence",
     batch_size: int = 1,
@@ -25,7 +26,7 @@ def run(
             "Generating sentence: %s", sentence
         )
         start_time = time.monotonic()
-        syn_tokens = model.generate_speech(prompt=text, voice="tara")
+        syn_tokens = model.generate_speech(prompt=text, voice="tara", repetition_penalty=repetition_penalty)
         channels = 1
         sampwidth = 2
         framerate = 24000
