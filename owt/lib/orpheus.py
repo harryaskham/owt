@@ -4,13 +4,15 @@ from owt.lib import stream, encoding, tts
 import os
 import logging
 import numpy as np
-from orpheus_tts import OrpheusModel
+import gguf_orpheus
 import time
 
 def run(
     text: str = "",
-    model = OrpheusModel(model_name ="canopylabs/orpheus-tts-0.1-finetune-prod")
-    speaker: Literal["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"] = "tara".
+    speaker: Literal["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"] = "tara",
+    temperature: float = 0.6,
+    top_p: float = 0.9,
+    max_tokens: int = 1200,
     repetition_penalty: float = 1.1,
     sentence_template: str = "%s",
     split_type: Literal["sentence", "none"] = "sentence",
@@ -25,28 +27,22 @@ def run(
         logging.info(
             "Generating sentence: %s", sentence
         )
-        start_time = time.monotonic()
-        syn_tokens = model.generate_speech(prompt=text, voice="tara", repetition_penalty=repetition_penalty)
-        channels = 1
-        sampwidth = 2
-        framerate = 24000
-        total_frames = 0
-        chunk_counter = 0
-        for wav_array in syn_tokens: # output streaming
-          chunk_counter += 1
-          frame_count = len(wav_array) // sampwidth * channels
-          total_frames += frame_count
-          full_wav_array = (
-              wav_array
-              if full_wav_array is None
-              else np.concatenate((full_wav_array, wav_array))
-          )
-        duration = total_frames / framerate
-        end_time = time.monotonic()
-        print(f"It took {end_time - start_time} seconds to generate {duration:.2f} seconds of audio")
-        return stream.event(
-            chunk=encoding.base64_wav(wav_array, sample_rate),
-            cumulative=encoding.base64_wav(full_wav_array, sample_rate))
+        chunk_stream = gguf_orpheus.tokens_decoder(
+            gguf_orpheus.generate_speech_from_api(
+                prompt=text,
+                voice=speaker,
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
+                repetition_penalty=repetition_penalty))
+        for wav_array in chunk_stream:
+            full_wav_array = (
+                wav_array
+                if full_wav_array is None
+                else np.concatenate((full_wav_array, wav_array)))
+            return stream.event(
+                chunk=encoding.base64_wav(wav_array, gguf_orpheus.SAMPLE_RATE),
+                cumulative=encoding.base64_wav(full_wav_array, gguf_orpheus.SAMPLE_RATE))
 
     def output():
         match split_type:

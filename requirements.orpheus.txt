@@ -1,1 +1,4 @@
-git+https://github.com/canopyai/Orpheus-TTS.git
+sounddevice
+requests
+wave
+snac
