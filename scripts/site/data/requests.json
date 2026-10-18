@@ -1,0 +1,111 @@
+[
+ {
+  "id": "explicit",
+  "what": "code that defines run",
+  "code": "def run(name):\n    return f\"hello, {name}\"",
+  "kwargs": {
+   "name": "owt"
+  },
+  "extra": {},
+  "status": 200,
+  "response": "hello, owt"
+ },
+ {
+  "id": "implicit",
+  "what": "an expression becomes run",
+  "code": "lambda word: word[::-1]",
+  "kwargs": {
+   "word": "stressed"
+  },
+  "extra": {},
+  "status": 200,
+  "response": "desserts"
+ },
+ {
+  "id": "terse",
+  "what": "a chain of calls is appended to pipe()",
+  "code": "kwarg('text').f(str.upper)",
+  "kwargs": {
+   "text": "quiet please"
+  },
+  "extra": {},
+  "status": 200,
+  "response": "QUIET PLEASE"
+ },
+ {
+  "id": "error",
+  "what": "an exception is a 500",
+  "code": "def run():\n    raise ValueError(\"nope\")",
+  "kwargs": {},
+  "extra": {},
+  "status": 500,
+  "response": "Error executing Unsafe code: Error executing Unsafe code: nope"
+ },
+ {
+  "id": "state-1",
+  "what": "server globals persist between requests",
+  "code": "def run():\n    global hits\n    hits = globals().get('hits', 0) + 1\n    return str(hits)",
+  "kwargs": {},
+  "extra": {},
+  "status": 200,
+  "response": "1"
+ },
+ {
+  "id": "state-2",
+  "what": "the same request again",
+  "code": "def run():\n    global hits\n    hits = globals().get('hits', 0) + 1\n    return str(hits)",
+  "kwargs": {},
+  "extra": {},
+  "status": 200,
+  "response": "2"
+ },
+ {
+  "id": "import-top",
+  "what": "a module-level import is not visible inside run",
+  "code": "import time\ndef run():\n    return str(time.time_ns())",
+  "kwargs": {},
+  "extra": {},
+  "status": 500,
+  "response": "Error executing Unsafe code: Error executing Unsafe code: name 'time' is not defined"
+ },
+ {
+  "id": "cache-1",
+  "what": "cached by path",
+  "code": "def run():\n    import time\n    return str(time.time_ns())",
+  "kwargs": {},
+  "extra": {
+   "use_cache": true
+  },
+  "status": 200,
+  "response": "1792283790056393351"
+ },
+ {
+  "id": "cache-2",
+  "what": "the same path again: the cached answer",
+  "code": "def run():\n    import time\n    return str(time.time_ns())",
+  "kwargs": {},
+  "extra": {
+   "use_cache": true
+  },
+  "status": 200,
+  "response": "1792283790059351956"
+ },
+ {
+  "id": "auth-none",
+  "what": "no credentials",
+  "code": "lambda: 'hi'",
+  "kwargs": {},
+  "extra": {},
+  "status": 401,
+  "response": "Unauthorized Access"
+ },
+ {
+  "id": "auth-ok",
+  "what": "with credentials",
+  "code": "lambda: 'hi'",
+  "kwargs": {},
+  "extra": {},
+  "status": 200,
+  "response": "hi"
+ }
+]

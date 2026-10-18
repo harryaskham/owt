@@ -137,8 +137,7 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
+# site/ is the hand-written static site (not mkdocs output), so it is tracked.
 
 # mypy
 .mypy_cache/
